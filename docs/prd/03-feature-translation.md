@@ -32,6 +32,18 @@
 - FilterChip: `전체` + `한국어` / `English` / `日本語` / `中文`
 - 항목 탭 → `DiaryDetail(id)`
 
+## TranslationSummary 집계 로직
+
+`DiaryListViewModel`이 `(DiaryEntry, List<Translation>)` 스트림을 소비해 각 항목의 `TranslationSummary`를 파생한다.
+
+우선순위 (높음 → 낮음):
+1. 번역 레코드 없음 → `Empty`
+2. 하나 이상 `ERROR` → `HasError`
+3. 하나 이상 `PENDING` (ERROR 없음) → `InProgress(completed, total)`
+4. 전부 `SUCCESS` → `AllDone`
+
+이 집계는 `DiaryListScreen`의 `TranslationStatusBadge`와 `DiaryDetailScreen`의 탭 인디케이터 양쪽에서 소비한다. 집계 변경 시 두 화면 모두 영향을 받으므로 동시에 검토해야 한다.
+
 ## 상태 머신
 
 ```

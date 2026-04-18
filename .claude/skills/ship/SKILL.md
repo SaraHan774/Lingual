@@ -5,9 +5,10 @@ description: "Lingual 기능의 전체 전달 사이클(PRD → Code → Review 
 
 # /ship — Feature Delivery Cycle Orchestrator
 
-너(메인 Claude)는 이 스킬이 호출되는 동안 **오케스트레이터** 역할을 한다. 직접 코드를 짜거나 리뷰·QA 를 수행하지 않는다. 오직 아래 4개 에이전트를 `Task` 툴로 호출하고, 각 에이전트가 방출하는 **VERDICT** 블록을 읽어 다음 스테이지로 분기할 뿐이다.
+너(메인 Claude)는 이 스킬이 호출되는 동안 **오케스트레이터** 역할을 한다. 직접 코드를 짜거나 리뷰·QA 를 수행하지 않는다. 오직 아래 5개 에이전트를 `Task` 툴로 호출하고, 각 에이전트가 방출하는 **VERDICT** 블록을 읽어 다음 스테이지로 분기할 뿐이다.
 
 - `prd-curator` — PRD 확정
+- `prd-reviewer` — UX 품질 검토 (언어 학습 앱 전문 관점)
 - `coder` — 구현
 - `code-reviewer` — 리뷰
 - `qa-tester` — E2E 검증
@@ -26,7 +27,7 @@ description: "Lingual 기능의 전체 전달 사이클(PRD → Code → Review 
 ## 사이클 상수
 
 - `MAX_ITERATIONS_PER_STAGE = 3` — 같은 스테이지에 네 번째로 재진입해야 하면 `BLOCKED_HUMAN` 으로 에스컬레이트한다.
-- `STAGE_ORDER = [prd, code, review, qa]` — PASS 시 기본 전진 순서.
+- `STAGE_ORDER = [prd, prd-review, code, review, qa]` — PASS 시 기본 전진 순서.
 - `DONE` 상태: qa 에서 PASS 가 나오면 사이클 종료.
 
 ## 워크플로우
@@ -49,6 +50,7 @@ description: "Lingual 기능의 전체 전달 사이클(PRD → Code → Review 
 - **Current stage**: prd
 - **Iterations**:
   - prd: 0
+  - prd-review: 0
   - code: 0
   - review: 0
   - qa: 0
@@ -58,6 +60,9 @@ description: "Lingual 기능의 전체 전달 사이클(PRD → Code → Review 
 <!-- 각 스테이지 에이전트를 호출할 때 실어 보낼 최신 피드백. 해당 스테이지로 다시 돌아올 때마다 덮어쓴다. -->
 
 ### For prd
+(none)
+
+### For prd-review
 (none)
 
 ### For code
@@ -118,8 +123,8 @@ description: "Lingual 기능의 전체 전달 사이클(PRD → Code → Review 
 각 에이전트는 응답 **맨 마지막**에 다음 형태의 fenced block 을 출력해야 한다:
 
 ~~~verdict
-status: PASS | NEEDS_SPEC | NEEDS_CODE | NEEDS_REVIEW | NEEDS_QA | BLOCKED_HUMAN
-next_stage: prd | code | review | qa | done | human
+status: PASS | NEEDS_SPEC | NEEDS_UX | NEEDS_CODE | NEEDS_REVIEW | NEEDS_QA | BLOCKED_HUMAN
+next_stage: prd | prd-review | code | review | qa | done | human
 iteration: <에이전트가 호출 프롬프트에서 받은 iteration 숫자>
 cycle_file: .claude/cycles/<slug>.md
 feedback: |
@@ -138,8 +143,9 @@ refs:
 
 | 스테이지 | 방출 가능 status | 매핑된 next_stage |
 |---|---|---|
-| prd-curator | PASS, NEEDS_CODE(드묾), BLOCKED_HUMAN | PASS→code, BLOCKED→human |
-| coder | PASS, NEEDS_SPEC, BLOCKED_HUMAN | PASS→review, NEEDS_SPEC→prd, BLOCKED→human |
+| prd-curator | PASS, BLOCKED_HUMAN | PASS→prd-review, BLOCKED→human |
+| prd-reviewer | PASS, NEEDS_SPEC, BLOCKED_HUMAN | PASS→code, NEEDS_SPEC→prd, BLOCKED→human |
+| coder | PASS, NEEDS_SPEC, NEEDS_UX, BLOCKED_HUMAN | PASS→review, NEEDS_SPEC→prd, NEEDS_UX→prd-review, BLOCKED→human |
 | code-reviewer | PASS, NEEDS_CODE, NEEDS_SPEC, BLOCKED_HUMAN | PASS→qa, NEEDS_CODE→code, NEEDS_SPEC→prd, BLOCKED→human |
 | qa-tester | PASS, NEEDS_CODE, NEEDS_SPEC, BLOCKED_HUMAN | PASS→done, NEEDS_CODE→code, NEEDS_SPEC→prd, BLOCKED→human |
 

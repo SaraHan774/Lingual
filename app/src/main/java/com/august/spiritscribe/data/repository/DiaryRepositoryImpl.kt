@@ -24,6 +24,11 @@ class DiaryRepositoryImpl @Inject constructor(
     override fun observeAll(): Flow<List<DiaryEntry>> =
         diaryEntryDao.observeAll().map { list -> list.map { it.toDomain() } }
 
+    override fun observeAllWithTranslations(): Flow<List<Pair<DiaryEntry, List<Translation>>>> =
+        diaryEntryDao.observeAllWithDetails().map { list ->
+            list.map { it.entry.toDomain() to it.translations.map { t -> t.toDomain() } }
+        }
+
     override fun observeEntry(id: String): Flow<DiaryEntry?> =
         diaryEntryDao.observeWithDetails(id).map { it?.entry?.toDomain() }
 

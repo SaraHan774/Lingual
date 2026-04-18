@@ -70,7 +70,7 @@ fun TranslateBrowseScreen(
                 }
             }
 
-            val filtered = entries.filter { filter == null || it.sourceLanguage == filter }
+            val filtered = entries.filter { filter == null || it.entry.sourceLanguage == filter }
 
             if (filtered.isEmpty()) {
                 Box(
@@ -88,8 +88,8 @@ fun TranslateBrowseScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    items(filtered, key = { it.id }) { entry ->
-                        TranslateEntryRow(entry = entry, onClick = { onEntryClick(entry.id) })
+                    items(filtered, key = { it.entry.id }) { item ->
+                        TranslateEntryRow(entry = item.entry, onClick = { onEntryClick(item.entry.id) })
                     }
                 }
             }

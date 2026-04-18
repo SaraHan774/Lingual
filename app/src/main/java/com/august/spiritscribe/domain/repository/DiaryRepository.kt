@@ -10,6 +10,8 @@ interface DiaryRepository {
 
     fun observeAll(): Flow<List<DiaryEntry>>
 
+    fun observeAllWithTranslations(): Flow<List<Pair<DiaryEntry, List<Translation>>>>
+
     fun observeEntry(id: String): Flow<DiaryEntry?>
 
     fun observeTranslations(entryId: String): Flow<List<Translation>>

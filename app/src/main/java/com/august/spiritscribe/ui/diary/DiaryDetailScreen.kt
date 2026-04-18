@@ -9,12 +9,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Stop
@@ -45,6 +47,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -168,7 +171,10 @@ private fun DetailContent(
             AppLanguage.entries.filter { it != entry.sourceLanguage }.forEach { add(it) }
         }
     }
-    var selectedIndex by remember { mutableStateOf(0) }
+    val translationsByLang = remember(translations) {
+        translations.associateBy { it.targetLanguage }
+    }
+    var selectedIndex by rememberSaveable { mutableStateOf(0) }
     val selectedLanguage = languages[selectedIndex]
 
     Column(
@@ -196,13 +202,20 @@ private fun DetailContent(
             modifier = Modifier.padding(top = 12.dp),
         ) {
             languages.forEachIndexed { index, lang ->
+                val isSource = lang == entry.sourceLanguage
+                val translationStatus = if (isSource) {
+                    null
+                } else {
+                    translationsByLang[lang]?.status
+                }
                 Tab(
                     selected = index == selectedIndex,
                     onClick = { selectedIndex = index },
                     text = {
-                        Text(
-                            if (lang == entry.sourceLanguage) "${lang.displayName} (원문)"
-                            else lang.displayName,
+                        TabLabel(
+                            label = if (isSource) "${lang.displayName} (원문)" else lang.displayName,
+                            isSource = isSource,
+                            status = translationStatus,
                         )
                     },
                 )
@@ -214,7 +227,7 @@ private fun DetailContent(
         LanguagePanel(
             entry = entry,
             selectedLanguage = selectedLanguage,
-            translation = translations.firstOrNull { it.targetLanguage == selectedLanguage },
+            translation = translationsByLang[selectedLanguage],
             tts = tts,
             onSpeak = onSpeak,
             onStop = onStop,
@@ -492,6 +505,43 @@ private fun AddWordCardBottomSheet(
                         state.translations.isNotEmpty(),
                 ) {
                     Text(if (state.isSaving) "저장 중..." else "저장")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TabLabel(
+    label: String,
+    isSource: Boolean,
+    status: TranslationStatus?,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text(text = label)
+        // 원문/번역 탭 모두 상태와 무관하게 10dp 영역을 항상 예약한다. 번역 탭의 PENDING →
+        // SUCCESS 전이뿐 아니라 원문/번역 탭 사이의 너비 비대칭도 함께 방지한다. 원문 탭은
+        // status 가 null 이므로 Box 내부가 비어 있다.
+        Box(
+            modifier = Modifier.size(10.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (!isSource) {
+                when (status) {
+                    TranslationStatus.PENDING -> CircularProgressIndicator(
+                        modifier = Modifier.size(8.dp),
+                        strokeWidth = 1.5.dp,
+                    )
+                    TranslationStatus.ERROR -> Icon(
+                        imageVector = Icons.Filled.Error,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(10.dp),
+                    )
+                    TranslationStatus.SUCCESS, null -> Unit
                 }
             }
         }

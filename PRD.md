@@ -4,7 +4,7 @@
 >
 > **Maintained by:** [`.claude/agents/prd-curator.md`](./.claude/agents/prd-curator.md)
 > **Supported locales:** 한국어 · English · 日本語 · 中文
-> **Last indexed:** 2026-04-18
+> **Last indexed:** 2026-04-18 (번역 상태 표시 UI 스펙 추가)
 
 ---
 

@@ -19,6 +19,18 @@
 
 **Write → Translate 파이프라인** — `WriteDiaryViewModel.save()` 가 엔트리 저장 → 나머지 3개 언어에 `PENDING` 플레이스홀더 upsert → `translationEngine.translate()` → 결과를 `SUCCESS`/`ERROR` 로 upsert. `DiaryDetailScreen` 은 Flow 구독으로 탭별 스피너 → 텍스트 전이. 실패 탭에는 재시도 버튼.
 
+## Feature workflow (MANDATORY)
+
+기능 추가·수정·삭제가 포함된 모든 작업 — "분석 후 구현" 요청 포함 — 은 아래 순서를 반드시 따른다.
+
+1. **prd-curator** → PRD.md + docs/prd/ 갱신
+2. **prd-reviewer** → UX 관점 검토 (CRITICAL 없어야 통과)
+3. **coder** → 구현
+4. **code-reviewer** → diff 리뷰
+5. **qa-tester** → E2E 검증
+
+`/ship <기능>` 스킬이 이 사이클을 자동으로 실행한다. 가능하면 `/ship` 을 사용할 것.
+
 ## Non-obvious rules
 
 - **언어 코드는 반드시 `AppLanguage` enum 경유.** 하드코딩된 `"ko"`/`"en"`/`"ja"`/`"zh"` 금지. ML Kit 변환은 `TranslateLanguage.fromLanguageTag(...)`.
@@ -28,6 +40,7 @@
 - **ML Kit**: 언어쌍당 첫 호출은 ~30MB 모델 다운로드로 느림. 이후 오프라인 가능. `Translator` 는 `(source, target)` 키로 캐시되고 `suspendCancellableCoroutine` 으로 `Task` 콜백을 코루틴으로 bridge.
 - **TTS**: `@Singleton TtsService` 가 `StateFlow<TtsState>` (`Idle`/`Playing`/`Error`) 노출. `AppLanguage.toLocale()` 로 Locale 지정. 기기에 TTS 데이터 미설치 Locale 은 `Error("Language not supported: ...")`.
 - **Room**: `exportSchema = false`. 마이그레이션 미설정 → version bump 는 destructive rebuild 를 전제로 한다.
+- **Compose one-shot 이벤트**: `MutableSharedFlow<Unit>(replay=0, extraBufferCapacity=1)` + `LaunchedEffect(Unit) { collect { ... } }` 패턴 사용. `StateFlow<Int>` + increment 방식은 Composition 재생성(화면 회전 등) 시 마지막 값으로 LaunchedEffect 가 재실행되어 replay 버그 발생.
 
 ## Commands
 
