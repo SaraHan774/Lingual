@@ -1,84 +1,54 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+## Project
 
-## Project Overview
+**Lingual** — polyglot을 위한 Android 일기 앱. KO/EN/JA/ZH 중 하나로 작성하면 나머지 3개 언어로 온디바이스 번역, TTS 재생, 단어카드 생성. 배포 타겟: Google Play.
 
-**Lingual** is an Android diary app for polyglots. Users write diary entries in one of Korean / English / Japanese / Chinese, and the app auto-translates to the other three languages on-device, reads each translation aloud via TTS, and builds a vocabulary flashcard deck from selected words.
-
-- Public release target: Google Play Store
-- Repository/folder name is still `spiritscribe` (legacy); `applicationId` and Kotlin package are still `com.august.spiritscribe` because Firebase (google-services.json, App Distribution) is keyed to it. The user-facing launcher label is `Lingual` (`res/values/strings.xml` → `app_name`).
-- A full package rename to `com.august.lingual` requires adding a new Android app in the Firebase Console, downloading a fresh `google-services.json`, updating `firebaseAppDistribution` app id, and refactoring all Kotlin package declarations via Android Studio's Refactor → Rename.
+리포지토리명·`applicationId`·Kotlin 패키지는 모두 `com.august.spiritscribe` 로 남아 있다(레거시, Firebase 키가 묶여 있음). 런처 라벨은 `strings.xml` → `app_name = "Lingual"`. 패키지 rename 은 Firebase 재설정 + `google-services.json` 교체가 동반되므로 가볍게 건드리지 않는다.
 
 ## Architecture
 
-Single-module Android app (`:app`). The legacy `:feature-lab` AR module has been removed. Clean architecture layering:
+단일 모듈 `:app`. Clean arch 3 레이어.
 
-- `ui/` — Jetpack Compose screens grouped by feature (`diary`, `flashcard`, `translate`, `settings`). Each feature has a `Screen` + `ViewModel`. `@HiltViewModel` + `collectAsStateWithLifecycle` for state.
-- `domain/model/` — Domain types (`DiaryEntry`, `Translation`, `WordCard`, `AppLanguage`). Each includes `toDomain()`/`toEntity()` mappers to/from Room entities. JSON fields use explicit `ListSerializer`/`MapSerializer` (not `reified` overloads) to avoid kotlinx.serialization type-inference failures.
-- `domain/repository/DiaryRepository` — single interface exposing `Flow`-based observers over entries, translations, and word cards. Default method `targetLanguagesFor(source)` returns the other three `AppLanguage.entries`.
-- `data/local/` — Room (`AppDatabase`, version 1, `lingual.db`) with three entities: `DiaryEntryEntity`, `TranslationEntity` (CASCADE delete FK to DiaryEntry, unique `(diaryEntryId, targetLanguage)` index), `WordCardEntity` (SET NULL FK).
-- `data/repository/DiaryRepositoryImpl` — `@Singleton`, injects the three DAOs.
-- `data/translation/` — `TranslationEngine` interface + `MlKitTranslationEngine` implementation. The engine caches `Translator` instances per `(source, target)` pair and bridges ML Kit's `Task` callbacks to coroutines via `suspendCancellableCoroutine`. `modelVersion = "mlkit-v1"` is persisted with each translation for future migrations.
-- `utils/TtsService` — `@Singleton` wrapper around Android `TextToSpeech` that exposes a `StateFlow<TtsState>` (`Idle` / `Playing(language, utteranceId)` / `Error(message)`). Uses `UtteranceProgressListener` to transition back to Idle on completion. `speak()` sets `Locale` from `AppLanguage.toLocale()` and clamps rate/pitch.
-- `di/` — `DatabaseModule` provides `AppDatabase` + DAOs, `RepositoryModule` `@Binds` `DiaryRepositoryImpl → DiaryRepository` and `MlKitTranslationEngine → TranslationEngine`.
+- `ui/` — Compose + `@HiltViewModel` + `collectAsStateWithLifecycle`. 기능별 `Screen` + `ViewModel` 쌍.
+- `domain/` — 모델(`DiaryEntry`, `Translation`, `WordCard`, `AppLanguage`) + `toDomain()`/`toEntity()` 매퍼 + `DiaryRepository` 인터페이스.
+- `data/` — Room (`AppDatabase` v1, `lingual.db`), `DiaryRepositoryImpl`, `TranslationEngine` 인터페이스 + `MlKitTranslationEngine`.
+- `di/` — `DatabaseModule`(DB/DAO), `RepositoryModule`(`@Binds` 구현체 ↔ 인터페이스).
 
-### Navigation
+**Navigation** — 타입 안정 `@Serializable` 라우트. 바텀탭 4개(`Diary/Translate/FlashCard/Settings`), 디테일 라우트(`WriteDiary`/`DiaryDetail(id)`/`FlashCardStudy`)는 `hideBottomNavigationRoutes` 로 바텀바 숨김. id 추출은 `savedStateHandle.toRoute<DiaryDetail>().id`.
 
-`Navigation.kt` uses type-safe `@Serializable` routes:
-- Bottom nav tabs: `Screen.Diary`, `Screen.Translate`, `Screen.FlashCard`, `Screen.Settings` (plain string routes).
-- Detail routes: `WriteDiary`, `DiaryDetail(id)`, `FlashCardStudy` — passed as typed data class / object instances to `navController.navigate()`.
-- `MainActivity` hides the bottom bar on detail routes by checking `destination.hasRoute<WriteDiary>() / hasRoute<DiaryDetail>() / hasRoute<FlashCardStudy>()` against `hideBottomNavigationRoutes`.
-- `DiaryDetailViewModel` extracts its id via `savedStateHandle.toRoute<DiaryDetail>().id`.
+**Write → Translate 파이프라인** — `WriteDiaryViewModel.save()` 가 엔트리 저장 → 나머지 3개 언어에 `PENDING` 플레이스홀더 upsert → `translationEngine.translate()` → 결과를 `SUCCESS`/`ERROR` 로 upsert. `DiaryDetailScreen` 은 Flow 구독으로 탭별 스피너 → 텍스트 전이. 실패 탭에는 재시도 버튼.
 
-### Write → Translate flow
+## Non-obvious rules
 
-`WriteDiaryViewModel.save()` (1) creates the `DiaryEntry`, (2) for each of the other three languages upserts a `PENDING` placeholder translation, (3) calls `translationEngine.translate(...)`, (4) upserts the final `SUCCESS` or `ERROR` translation. The detail screen observes the translation flow, so each language tab transitions from spinner → text as models finish.
+- **언어 코드는 반드시 `AppLanguage` enum 경유.** 하드코딩된 `"ko"`/`"en"`/`"ja"`/`"zh"` 금지. ML Kit 변환은 `TranslateLanguage.fromLanguageTag(...)`.
+- **kotlinx.serialization 의 reified 오버로드 금지.** `ListSerializer`/`MapSerializer(String.serializer(), String.serializer())` 를 명시해야 컴파일된다. 예: `WordCardEntity.translationsJson`.
+- **FK 의도**: `TranslationEntity` → `CASCADE` (일기 삭제 시 번역 삭제), `WordCardEntity` → `SET NULL`.
+- **권한**: `INTERNET` 만. 추가 권한은 PRD 근거 필요. ML Kit 모델 자동 다운로드를 위해 `com.google.mlkit.vision.DEPENDENCIES = translate` 를 manifest 에 선언.
+- **ML Kit**: 언어쌍당 첫 호출은 ~30MB 모델 다운로드로 느림. 이후 오프라인 가능. `Translator` 는 `(source, target)` 키로 캐시되고 `suspendCancellableCoroutine` 으로 `Task` 콜백을 코루틴으로 bridge.
+- **TTS**: `@Singleton TtsService` 가 `StateFlow<TtsState>` (`Idle`/`Playing`/`Error`) 노출. `AppLanguage.toLocale()` 로 Locale 지정. 기기에 TTS 데이터 미설치 Locale 은 `Error("Language not supported: ...")`.
+- **Room**: `exportSchema = false`. 마이그레이션 미설정 → version bump 는 destructive rebuild 를 전제로 한다.
 
-`DiaryDetailScreen` renders one tab per language (source language marked with `(원문)`), delegates TTS playback to `TtsService`, and exposes a retry button on `ERROR` translations.
-
-## Common Commands
+## Commands
 
 ```bash
-# Build
 ./gradlew :app:assembleDebug
-./gradlew :app:assembleRelease
-./gradlew build
-
-# Install / run on connected device
-./gradlew :app:installDebug
-adb shell am start -n com.august.spiritscribe/.MainActivity
-
-# Tests
-./gradlew :app:test
-./gradlew :app:connectedAndroidTest
+./gradlew :app:installDebug && adb shell am start -n com.august.spiritscribe/.MainActivity
 ./gradlew :app:test --tests "com.august.spiritscribe.*"
-
-# Firebase App Distribution (deploy.sh wraps assembleDebug/Release + upload)
-./deploy.sh debug "Release notes"
-./deploy.sh release "Release notes"
+./gradlew :app:connectedAndroidTest
+./deploy.sh debug|release "Release notes"   # Firebase App Distribution
 ```
 
-## Key Configuration
+## Config pins
 
-- `compileSdk = 35`, `minSdk = 28`, `targetSdk = 35`, `ndkVersion = "25.1.8937393"`
-- `applicationId = "com.august.spiritscribe"` — do not change without also updating `app/google-services.json` and Firebase App Distribution settings.
-- Kotlin JVM target 1.8 (compileOptions + kotlinOptions); build daemon runs Java 21 and warns about the obsolete target — expected.
-- `libs.versions.toml` keys: `mlkitTranslate = "17.0.3"`, `mlkitLanguageId = "17.0.6"`.
-- `AndroidManifest.xml` declares `com.google.mlkit.vision.DEPENDENCIES = translate` so ML Kit models download automatically after install. Only `INTERNET` permission is requested.
-
-## Data / ML Kit notes
-
-- First translation per language pair downloads a ~30MB model; subsequent calls are offline. The engine calls `downloadModelIfNeeded()` inside `translate()`, so translations are slow on first use.
-- `AppLanguage` enum is the single source of truth for language codes (`ko`, `en`, `ja`, `zh`) and display names. ML Kit language tags are resolved via `TranslateLanguage.fromLanguageTag(...)` in `MlKitTranslationEngine`.
-- `WordCardEntity` stores per-language translations as a JSON map (`translationsJson`); decoding uses `MapSerializer(String.serializer(), String.serializer())` with explicit serializer parameters — do not replace with reified `Json.encodeToString(value)` or compilation fails.
+- `compileSdk=35`, `minSdk=28`, `targetSdk=35`, `ndkVersion=25.1.8937393`, Kotlin JVM target `1.8`.
+- `libs.versions.toml`: `mlkitTranslate=17.0.3`, `mlkitLanguageId=17.0.6`.
 
 ## Testing
 
-Unit tests live in `app/src/test/`; instrumented tests in `app/src/androidTest/`. Use MockK for Hilt-injected dependencies and `androidx.room.testing` for in-memory Room databases. Database schemas are not exported (`exportSchema = false`) and migrations are not yet set up — version bumps currently require a destructive rebuild.
+- 단위: `app/src/test/`, 계측: `app/src/androidTest/`.
+- Hilt 의존성은 MockK 로 대체. Room 은 `androidx.room.testing` in-memory DB.
 
-## Notes for future work
+## Status
 
-- Word extraction from diary entries is Phase 2 — current UI only supports manual selection; auto-extraction is not implemented.
-- TTS honors device-installed voices. On emulators, verify the target Locale's TTS data is downloaded or the speak call emits `TtsState.Error("Language not supported: ...")`.
-- `SpiritScribeApplication` class name is legacy; it only calls `ResourceUtils.init(this)`. Safe to rename together with the full package refactor.
+- 단어 자동 추출은 Phase 2. 현재 UI 는 수동 선택만.
