@@ -1,0 +1,89 @@
+# 08 — Roadmap & Open Questions
+
+[← 목차로](../../PRD.md)
+
+이 문서는 **앞으로 할 일의 목록**이다. 우선순위·일정은 사용자(제품 오너)가 확정하며, `prd-curator` 에이전트는 항목을 관리할 뿐 스스로 스코프를 결정하지 않는다.
+
+## 현재 단계
+
+- **v0.1 MVP** — 로컬 테스트 / Firebase App Distribution 내부 배포 단계.
+- **다음 마일스톤**: v1.0 Play Store 공개 (일정 미정).
+
+## Phase 2 기능 후보 (우선순위 대략순)
+
+### P0 — Play Store 출시 전 필수
+
+1. **Room 마이그레이션 정비**
+   현재 destructive rebuild. 실사용자 데이터 손실 방지 위해 v1 → v2 마이그레이션 스크립트 기준 확립 필수. (`07-architecture.md` 참조)
+2. **패키지 리네임 `com.august.spiritscribe` → `com.august.lingual`**
+   - Firebase Console에 신규 Android 앱 추가 → 새 `google-services.json` 다운로드 & 커밋.
+   - `applicationId`, Kotlin 패키지 선언 전체, `firebaseAppDistribution` app id 업데이트.
+   - Android Studio **Refactor → Rename**으로 일괄 처리.
+   - `SpiritScribeApplication` 클래스명 → `LingualApplication`으로 함께 리네임.
+3. **개인정보 처리방침 + 스토어 리스팅 텍스트 (4개 언어)**
+   Play Console 제출용. 데이터 안전성 섹션에 "외부 전송 없음" 명시.
+4. **Crashlytics 도입**
+   최소한의 관측성. 개인정보 전송 없이 스택트레이스만.
+5. **앱 아이콘·스플래시 4개 언어 느낌에 맞춘 브랜딩**
+
+### P1 — 사용자 만족도 상승
+
+6. **자동 단어 추출** (→ `04-feature-flashcard.md`)
+   ML Kit Entity Extraction 또는 간단한 빈도/난이도 휴리스틱.
+7. **학습 세션 모드 (`FlashCardStudy` 라우트 활성화)**
+   즐겨찾기/숙련도 낮음 카드 우선, 세션 종료 후 통계.
+8. **일기 편집 기능 + 편집 시 번역 무효화 정책**
+9. **TTS 속도·피치 사용자 설정** (→ `06-feature-settings.md`)
+10. **검색/필터 (일기 본문 검색)**
+
+### P2 — 확장성·파워 유저
+
+11. **데이터 내보내기/가져오기 (JSON)**
+12. **앱 잠금 (생체 / PIN)**
+13. **간격 반복 (SM-2 lite)** — `nextReviewAt` 활성화.
+14. **예문 자동 채움** — 원문 일기 문장에서 해당 단어 포함 문장을 추출.
+15. **자동 언어 감지** — `MlKitLanguageIdentification` 활용해 작성 시 원문 언어 자동 지정.
+
+### P3 — 장기 검토
+
+16. **번체 중국어(`zh-TW`) 분리**
+17. **스페인어·프랑스어 등 언어 확장**
+18. **iOS 클라이언트** (데이터 포맷 호환 포함 전면 재설계)
+19. **번역 품질 피드백 (👍/👎)** — 로컬 집계만으로 할지 외부 수집할지 결정 필요.
+
+## 전 범위 Open Questions 모음
+
+각 기능 문서에 흩어진 Open Questions를 한눈에 본다. 해결되면 해당 원본 문서의 Open Questions에서 제거하고 수용 기준으로 승격.
+
+| 영역 | 질문 | 원본 문서 |
+|------|------|-----------|
+| 제품 전략 | 언어 확장 기준은? | `01-overview.md` |
+| 제품 전략 | 일기 길이 상한? | `01-overview.md` |
+| 제품 전략 | 로컬 DB 내보내기/가져오기 제공? | `01-overview.md` |
+| Diary | 편집 시 번역 무효화 정책 | `02-feature-diary.md` |
+| Diary | Mood/Tags UI 노출 or 스키마 제거 | `02-feature-diary.md` |
+| Diary | 검색/필터 도입 시점 | `02-feature-diary.md` |
+| Translation | Stale PENDING 회수 전략 | `03-feature-translation.md` |
+| Translation | 품질 피드백 수집 수단 | `03-feature-translation.md` |
+| Translation | `zh-TW` 분리 여부 | `03-feature-translation.md` |
+| Translation | 자동 언어 감지 여부 | `03-feature-translation.md` |
+| FlashCard | 단어 추가 UI 위치 | `04-feature-flashcard.md` |
+| FlashCard | 단어 단위 번역 소스 | `04-feature-flashcard.md` |
+| FlashCard | 중복 단어 처리 정책 | `04-feature-flashcard.md` |
+| TTS | 탭 이동 시 재생 지속 여부 | `05-feature-tts.md` |
+| TTS | 긴 문장 분할 재생 | `05-feature-tts.md` |
+| TTS | 속도 설정 저장 범위 | `05-feature-tts.md` |
+| Settings | 앱 잠금 범위 | `06-feature-settings.md` |
+| Settings | 기본 원문 언어 기본값 정책 | `06-feature-settings.md` |
+| Settings | 내보내기 포맷 | `06-feature-settings.md` |
+| Architecture | Room 마이그레이션 전략 | `07-architecture.md` |
+| Architecture | 관측성(Crashlytics 등) 도입 범위 | `07-architecture.md` |
+| Architecture | 테스트 커버리지 목표 | `07-architecture.md` |
+
+## 의사결정 로그
+
+변경된 제품 결정은 여기에 날짜순으로 추가한다. 번복 시 기존 항목을 삭제하지 않고 "~~취소선~~ + 사유" 형식으로 남긴다.
+
+| 날짜 | 결정 | 사유 |
+|------|------|------|
+| 2026-04-18 | PRD를 TOC 루트 + `docs/prd/` 하위 구조로 분리, `prd-curator` 에이전트가 유지 | 기능 단위 변경의 추적성·리뷰 용이성 확보 |

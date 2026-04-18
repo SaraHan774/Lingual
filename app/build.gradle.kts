@@ -132,9 +132,10 @@ dependencies {
 
     implementation(libs.androidx.paging.runtime) // For non-Compose parts
     implementation(libs.androidx.paging.compose) // <-- THIS IS NEEDED
-    
-    // Feature modules
-    implementation(project(":feature-lab"))
+
+    // ML Kit Translation (on-device, offline)
+    implementation(libs.mlkit.translate)
+    implementation(libs.mlkit.language.id)
 }
 
 // Firebase App Distribution 설정
@@ -144,14 +145,11 @@ firebaseAppDistribution {
     
     // 동적 릴리즈 노트 (Git 해시와 빌드 시간 포함)
     releaseNotes = """
-        🥃 SpiritScribe 앱 새로운 빌드
-        
-        📦 버전: ${android.defaultConfig.versionName}
-        🔗 커밋: ${getGitHash()}
-        🕒 빌드 시간: ${getBuildTime()}
-        
-        새로운 기능과 개선사항을 테스트해보세요!
-        피드백은 Firebase Console을 통해 제공해주세요.
+        Lingual 새 빌드 — 다국어 일기 번역/학습 앱
+
+        버전: ${android.defaultConfig.versionName}
+        커밋: ${getGitHash()}
+        빌드: ${getBuildTime()}
     """.trimIndent()
     
     // Firebase App Distribution에 업로드할 때 사용할 서비스 계정 키 파일 경로

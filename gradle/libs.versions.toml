@@ -27,6 +27,8 @@ composeMaterial = "1.4.1"
 pagingCommonAndroid = "3.3.6"
 googleFirebaseAppdistribution = "5.1.1"
 googleGmsGoogleServices = "4.4.3"
+mlkitTranslate = "17.0.3"
+mlkitLanguageId = "17.0.6"
 
 [libraries]
 accompanist-drawablepainter = { module = "com.google.accompanist:accompanist-drawablepainter", version.ref = "accompanistDrawablepainter" }
@@ -66,6 +68,8 @@ androidx-room-compiler = { group = "androidx.room", name = "room-compiler", vers
 androidx-room-testing = { group = "androidx.room", name = "room-testing", version.ref = "room" }
 androidx-compose-material = { group = "androidx.wear.compose", name = "compose-material", version.ref = "composeMaterial" }
 androidx-paging-common-android = { group = "androidx.paging", name = "paging-common-android", version.ref = "pagingCommonAndroid" }
+mlkit-translate = { group = "com.google.mlkit", name = "translate", version.ref = "mlkitTranslate" }
+mlkit-language-id = { group = "com.google.mlkit", name = "language-id", version.ref = "mlkitLanguageId" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

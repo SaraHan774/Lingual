@@ -19,6 +19,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "spiritscribe"
+rootProject.name = "Lingual"
 include(":app")
-include(":feature-lab")
