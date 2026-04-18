@@ -67,9 +67,9 @@
 | Translation | 품질 피드백 수집 수단 | `03-feature-translation.md` |
 | Translation | `zh-TW` 분리 여부 | `03-feature-translation.md` |
 | Translation | 자동 언어 감지 여부 | `03-feature-translation.md` |
-| FlashCard | 단어 추가 UI 위치 | `04-feature-flashcard.md` |
-| FlashCard | 단어 단위 번역 소스 | `04-feature-flashcard.md` |
-| FlashCard | 중복 단어 처리 정책 | `04-feature-flashcard.md` |
+| FlashCard | ~~단어 추가 UI 위치~~ **확정**: 텍스트 선택 후 컨텍스트 메뉴 방식 | `04-feature-flashcard.md` |
+| FlashCard | ~~단어 단위 번역 소스~~ **확정**: ML Kit 단어 단위 직접 호출 | `04-feature-flashcard.md` |
+| FlashCard | ~~중복 단어 처리 정책~~ **확정**: 별도 카드로 추가(병합 없음) | `04-feature-flashcard.md` |
 | TTS | 탭 이동 시 재생 지속 여부 | `05-feature-tts.md` |
 | TTS | 긴 문장 분할 재생 | `05-feature-tts.md` |
 | TTS | 속도 설정 저장 범위 | `05-feature-tts.md` |
@@ -87,3 +87,6 @@
 | 날짜 | 결정 | 사유 |
 |------|------|------|
 | 2026-04-18 | PRD를 TOC 루트 + `docs/prd/` 하위 구조로 분리, `prd-curator` 에이전트가 유지 | 기능 단위 변경의 추적성·리뷰 용이성 확보 |
+| 2026-04-18 | FlashCard 카드 추가 UI: 텍스트 선택 후 컨텍스트 메뉴 방식 채택 | 별도 버튼보다 자연스러운 텍스트 선택 인터랙션 |
+| 2026-04-18 | 단어 카드 번역: ML Kit 단어 단위 직접 호출 (일기 번역 재사용 안 함) | 단어 카드는 독립 생애주기 필요, 문장 번역에서 단어 추출 불가 |
+| 2026-04-18 | 중복 단어: 별도 카드로 추가 (병합 없음) | v0.1은 단순성 우선, Phase 2에서 재검토 |
