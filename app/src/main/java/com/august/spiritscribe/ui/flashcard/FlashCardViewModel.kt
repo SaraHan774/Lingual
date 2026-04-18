@@ -43,6 +43,12 @@ class FlashCardViewModel @Inject constructor(
         }
     }
 
+    fun deleteCard(id: String) {
+        viewModelScope.launch {
+            repository.deleteWordCard(id)
+        }
+    }
+
     private fun computeNextReview(level: Int): Long {
         val now = System.currentTimeMillis()
         val dayMs = 24L * 60 * 60 * 1000

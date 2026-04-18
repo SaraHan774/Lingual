@@ -12,8 +12,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -22,11 +24,14 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -42,6 +47,7 @@ fun FlashCardScreen(
     viewModel: FlashCardViewModel = hiltViewModel(),
 ) {
     val cards by viewModel.cards.collectAsStateWithLifecycle()
+    var pendingDeleteCard by remember { mutableStateOf<WordCard?>(null) }
 
     Scaffold(
         topBar = { TopAppBar(title = { Text("단어장") }) },
@@ -77,10 +83,28 @@ fun FlashCardScreen(
                         },
                         onRate = { level -> viewModel.updateMastery(card, level) },
                         onToggleFavorite = { viewModel.toggleFavorite(card) },
+                        onRequestDelete = { pendingDeleteCard = card },
                     )
                 }
             }
         }
+    }
+
+    pendingDeleteCard?.let { target ->
+        AlertDialog(
+            onDismissRequest = { pendingDeleteCard = null },
+            title = { Text("이 단어 카드를 삭제할까요?") },
+            text = { Text("단어 \"${target.word}\" 카드를 삭제합니다.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.deleteCard(target.id)
+                    pendingDeleteCard = null
+                }) { Text("삭제") }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDeleteCard = null }) { Text("취소") }
+            },
+        )
     }
 }
 
@@ -91,6 +115,7 @@ private fun FlashCardItem(
     onToggleReveal: () -> Unit,
     onRate: (Int) -> Unit,
     onToggleFavorite: () -> Unit,
+    onRequestDelete: () -> Unit,
 ) {
     Card(
         modifier = Modifier
@@ -108,7 +133,7 @@ private fun FlashCardItem(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = card.word,
                         style = MaterialTheme.typography.titleLarge,
@@ -127,6 +152,13 @@ private fun FlashCardItem(
                         contentDescription = "즐겨찾기",
                         tint = if (card.isFavorite) MaterialTheme.colorScheme.primary
                         else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                IconButton(onClick = onRequestDelete) {
+                    Icon(
+                        imageVector = Icons.Filled.Delete,
+                        contentDescription = "삭제",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
