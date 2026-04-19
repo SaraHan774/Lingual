@@ -10,6 +10,7 @@
 > - 2026-04-18 `/ship wordcard-add-ux` iter 1 — 카드 추가 UX를 아이콘 버튼 + TextField BottomSheet 방식(방안 A)으로 전면 교체. `SelectionContainer` + `WordCardTextToolbar` 방식(Copy 납치 + 클립보드 프로브) 폐기. AC-1/AC-2 재정의, UX Flow A 전면 교체, Open Questions "카드 추가 UI 구현 방식" 항목 확정 처리.
 > - 2026-04-19 `/ship wordcard-translation-edit` iter 1 — 번역 수정 기능을 Phase 2에서 v0.1 in-progress로 승격. Non-Goals에서 분리(단어 자체 수정은 Phase 2 유지). AC-17~AC-21 신규 추가. UX Flow D(번역 수정) 추가. 데이터 모델에 `isTranslationEdited` 필드 추가. Open Questions 2건 추가.
 > - 2026-04-19 `/ship wordcard-translation-edit` iter 2 — prd-reviewer NEEDS_SPEC 피드백 4건 반영: AC-19 에러 스낵바 + BottomSheet 유지 조항 추가; UX Flow D 및 AC-19에 파괴적 덮어쓰기 경고 텍스트 추가; 번역 실패/빈 값 언어 처리 AC-22(신규)·AC-23(신규) 추가 및 AC-18 [저장] 비활성화 조건 예외 명기; 수정 인디케이터 위치를 공개 상태 전용으로 확정하여 AC-20 갱신 + Open Questions 항목 해소.
+> - 2026-04-19 `/ship flashcard-recent-filter` iter 1 — 필터 칩에 "최근 추가 (7일 내)" 옵션 신규 추가. `FlashCardFilter` enum 에 `RecentlyAdded` 케이스 추가. AC-9 갱신(4개 칩), AC-24(신규 — 7일 경계 계산 규칙), AC-25(신규 — 필터 상호 배타성 명시). UX Flow B, Empty State 문구(4개 언어), 필터 칩 레이블 테이블, 데이터 모델 테이블(`createdAt`/`updatedAt` 명시) 갱신.
 
 ---
 
@@ -71,14 +72,17 @@
 ```
 [FlashCard Tab]
   ├─ 통계 배너: "카드 N개 · 즐겨찾기 M개"
-  ├─ 필터 칩 행: [전체] [즐겨찾기] [복습 예정]
+  ├─ 필터 칩 행: [전체] [즐겨찾기] [복습 예정] [최근 추가]
   │     └─ 선택된 칩: filled 스타일, 나머지: outlined 스타일
+  │     └─ 한 번에 하나의 필터만 선택 가능(단일 선택, 상호 배타적)
   │     └─ "복습 예정" = nextReviewAt ≤ now 조건
+  │     └─ "최근 추가" = createdAt ≥ (now - 7일) 조건 (7일 내 생성된 카드만)
   ├─ 비어 있음: 아이콘 + 안내 텍스트 조합 (Empty State UI)
   │     └─ 필터에 따라 안내 문구 분기
   │           ├─ 전체 비어 있음: "아직 단어 카드가 없습니다. 일기에서 단어를 추가해 보세요."
   │           ├─ 즐겨찾기 비어 있음: "즐겨찾기한 카드가 없습니다."
-  │           └─ 복습 예정 비어 있음: "복습 예정인 카드가 없습니다."
+  │           ├─ 복습 예정 비어 있음: "복습 예정인 카드가 없습니다."
+  │           └─ 최근 추가 비어 있음: "최근 7일 내에 추가된 카드가 없습니다."
   └─ 카드 있음: LazyColumn
         └─ 카드 아이템
               ├─ 헤더 행
@@ -98,7 +102,8 @@
 
 > **결정된 사항 (2026-04-18):** 삭제 버튼은 카드가 공개(revealed) 상태일 때만 표시한다. 미공개 상태에서의 실수 탭 방지 목적.
 > **결정된 사항 (2026-04-18):** 숙련도 레이블은 `Lv 0`=모름, `Lv 1`=어려움, `Lv 2`=보통, `Lv 3`=완벽 로 표시한다.
-> **결정된 사항 (2026-04-18):** 필터 상태는 `FlashCardViewModel` 내 `filterState: StateFlow<FlashCardFilter>` 로 관리한다. `FlashCardFilter`는 `All | Favorites | DueForReview` enum. DB 쿼리 변경 없이 ViewModel에서 Flow를 필터링하거나, 각 필터에 맞는 repository 메서드를 호출한다.
+> **결정된 사항 (2026-04-18):** 필터 상태는 `FlashCardViewModel` 내 `filterState: StateFlow<FlashCardFilter>` 로 관리한다. DB 쿼리 변경 없이 ViewModel에서 Flow를 필터링하거나, 각 필터에 맞는 repository 메서드를 호출한다.
+> **결정된 사항 (2026-04-19, flashcard-recent-filter):** `FlashCardFilter` enum 에 `RecentlyAdded` 케이스를 추가하여 `All | Favorites | DueForReview | RecentlyAdded` 4개 상태로 확장한다. 필터는 단일 선택(상호 배타적)이며, `RecentlyAdded` 는 `observeAllWordCards()` 의 Flow 를 `ViewModel` 단에서 `card.createdAt >= (System.currentTimeMillis() - 7 * 24 * 60 * 60 * 1000L)` 로 필터링한다. 별도 DAO 쿼리를 추가하지 않는다(목록 크기가 작을 것으로 가정, v0.1).
 > **결정된 사항 (2026-04-18):** 숙련도 Chip 선택 후 카드는 자동으로 접히지 않는다. 사용자가 동일 카드에서 연속으로 숙련도를 수정하거나 번역 내용을 계속 볼 수 있도록 공개(revealed) 상태를 유지한다.
 
 ### C. 카드 삭제
@@ -168,6 +173,8 @@
 | `nextReviewAt` | Long? | 다음 복습 시각. masteryLevel 선택 시 고정 간격으로 자동 설정: Lv 0 → +1일, Lv 1 → +3일, Lv 2 → +7일, Lv 3 → +30일. null이면 아직 숙련도가 한 번도 기록되지 않은 상태 |
 | `reviewCount` | Int | 복습 횟수 |
 | `isFavorite` | Boolean | 즐겨찾기 |
+| `createdAt` | Long | 카드 생성 시각(epoch millis). 목록 정렬 기준이며 "최근 추가 (7일 내)" 필터 경계 계산에도 사용 |
+| `updatedAt` | Long | 카드 마지막 수정 시각(epoch millis). 숙련도 선택/즐겨찾기 토글/번역 수정 시 갱신 |
 | `isTranslationEdited` | Boolean | 사용자가 번역을 한 번이라도 수정했으면 `true`. 기본값 `false`. ML Kit 자동 번역과 사용자 수정 번역을 UI에서 구분하는 데 사용 |
 
 JSON 직렬화 규칙: `MapSerializer(String.serializer(), String.serializer())`를 반드시 명시. reified 오버로드 금지 (CLAUDE.md 참조).
@@ -229,6 +236,15 @@ BottomSheet 제목 및 TextField hint:
 | 日本語 | 復習予定のカードはありません。 |
 | 中文 | 没有待复习的卡片。 |
 
+빈 상태 메시지 (최근 추가 필터):
+
+| 언어 | 표시 문자 |
+|------|-----------|
+| 한국어 | 최근 7일 내에 추가된 카드가 없습니다. |
+| English | No cards added in the last 7 days. |
+| 日本語 | 過去7日以内に追加されたカードはありません。 |
+| 中文 | 最近7天内没有添加的卡片。 |
+
 숙련도 레이블:
 
 | 레벨 | 한국어 | English | 日本語 | 中文 |
@@ -245,6 +261,9 @@ BottomSheet 제목 및 TextField hint:
 | 전체 | 전체 | All | すべて | 全部 |
 | 즐겨찾기 | 즐겨찾기 | Favorites | お気に入り | 收藏 |
 | 복습 예정 | 복습 예정 | Due | 復習予定 | 待复习 |
+| 최근 추가 | 최근 추가 | Recent | 最近追加 | 最近添加 |
+
+> 주: "최근 추가" 칩은 내부적으로 "7일 내" 를 의미하나, 칩 레이블 자체는 공간 절약을 위해 "최근 추가 / Recent / 最近追加 / 最近添加" 를 사용한다. 기간 정보는 Empty State 메시지와 PRD 정의로 보완한다.
 
 번역 수정 편집 아이콘 접근성 레이블 (contentDescription):
 
@@ -316,12 +335,12 @@ BottomSheet 제목 및 TextField hint:
 - [ ] **AC-6 (삭제 취소)**: 삭제 확인 다이얼로그에서 [취소]를 누르면 카드가 유지된다.
 - [ ] **AC-7 (sourceEntryId 연결)**: 저장된 카드의 `sourceEntryId`에 해당 일기의 ID가 정확히 기록된다. 이후 일기가 삭제되어도 카드의 `sourceEntryId`가 NULL이 되고 카드 자체는 유지된다 (FK SET NULL 정책).
 - [ ] **AC-8 (언어 코드)**: 카드 저장 시 `sourceLanguage`, `translations` 키는 반드시 `AppLanguage` enum 경유. 하드코딩된 문자열 금지.
-- [ ] **AC-9 (필터 칩)**: `FlashCardScreen` 상단에 "전체 / 즐겨찾기 / 복습 예정" 3개 필터 칩이 가로 행으로 배치된다. 선택된 칩은 filled 스타일, 나머지는 outlined 스타일이다. `FlashCardViewModel`은 `filterState: StateFlow<FlashCardFilter>` (`All | Favorites | DueForReview`)를 노출하며, 칩 선택 시 해당 필터로 즉시 목록이 갱신된다.
+- [ ] **AC-9 (필터 칩)**: `FlashCardScreen` 상단에 "전체 / 즐겨찾기 / 복습 예정 / 최근 추가" 4개 필터 칩이 가로 행으로 배치된다. 선택된 칩은 filled 스타일, 나머지는 outlined 스타일이다. `FlashCardViewModel`은 `filterState: StateFlow<FlashCardFilter>` (`All | Favorites | DueForReview | RecentlyAdded`)를 노출하며, 칩 선택 시 해당 필터로 즉시 목록이 갱신된다. 기본값은 `All`. 기존 필터 칩의 UI 패턴(`FilterChipRow` 동일 컴포저블)을 재사용하며, 새 칩을 기존 칩 뒤에 append 하는 방식으로 추가한다(순서: 전체 → 즐겨찾기 → 복습 예정 → 최근 추가).
 - [ ] **AC-10 (필터 — 복습 예정)**: "복습 예정" 필터는 `nextReviewAt != null && nextReviewAt ≤ currentTimeMillis()` 조건을 만족하는 카드만 표시한다. `nextReviewAt`이 null인 카드(숙련도를 한 번도 선택하지 않은 신규 카드)는 "복습 예정" 필터에서 제외된다.
 - [ ] **AC-11 (숙련도 레이블)**: 카드 공개 상태의 숙련도 선택 Chip 레이블이 `Lv 0`=모름, `Lv 1`=어려움, `Lv 2`=보통, `Lv 3`=완벽 으로 표시된다. 현재 선택된 레벨의 Chip은 filled 스타일, 나머지는 outlined 스타일이다. 숙련도 Chip 선택 즉시 카드 서브헤더의 `reviewCount` UI가 갱신된다(+1 반영 즉시 표시, Flow 구독 경유).
 - [ ] **AC-12 (숙련도 시각화)**: 카드 헤더에 `masteryLevel` 0–3을 시각적으로 표현하는 요소(도트 3개 또는 진행 바)가 표시된다. 레벨 0은 모든 요소 비활성, 레벨 3은 모든 요소 활성화된 상태로 한눈에 숙련도를 파악할 수 있다.
 - [ ] **AC-13 (통계 배너)**: `FlashCardScreen` 상단(필터 칩 위)에 "카드 N개 · 즐겨찾기 M개 · 오늘 복습 K개" 형태의 통계 배너가 표시된다. N은 전체 카드 수, M은 즐겨찾기 카드 수, K는 `nextReviewAt != null && nextReviewAt ≤ currentTimeMillis()` 조건의 카드 수이며, 카드 추가/삭제/즐겨찾기 토글/숙련도 선택 시 즉시 갱신된다. K가 0이면 "오늘 복습 0개" 도 표시한다(조건 달성 시 사용자 인지 가능).
-- [ ] **AC-14 (Empty State)**: 카드 목록이 비어 있을 때 텍스트만 표시하지 않고, 관련 아이콘 + 안내 텍스트 조합의 Empty State UI를 표시한다. 필터별 안내 문구가 다르다: 전체 비어 있음 → "아직 단어 카드가 없습니다. 일기에서 단어를 추가해 보세요.", 즐겨찾기 비어 있음 → "즐겨찾기한 카드가 없습니다.", 복습 예정 비어 있음 → "복습 예정인 카드가 없습니다."
+- [ ] **AC-14 (Empty State)**: 카드 목록이 비어 있을 때 텍스트만 표시하지 않고, 관련 아이콘 + 안내 텍스트 조합의 Empty State UI를 표시한다. 필터별 안내 문구가 다르다: 전체 비어 있음 → "아직 단어 카드가 없습니다. 일기에서 단어를 추가해 보세요.", 즐겨찾기 비어 있음 → "즐겨찾기한 카드가 없습니다.", 복습 예정 비어 있음 → "복습 예정인 카드가 없습니다.", 최근 추가 비어 있음 → "최근 7일 내에 추가된 카드가 없습니다."
 - [ ] **AC-15 (언어 배지)**: 카드 헤더에 출처 언어(`sourceLanguage`)를 소형 컬러 AssistChip으로 표시한다. 공개 상태의 번역 목록에서도 각 번역 항목 옆에 해당 언어의 AssistChip 배지가 표시된다. 언어별 칩 색상은 아래 팔레트를 기준으로 `AppLanguage` 값에 따라 일관되게 적용한다.
   - KO: 파랑 계열 (예: `Color(0xFF1565C0)` 배경, 흰 텍스트)
   - EN: 녹색 계열 (예: `Color(0xFF2E7D32)` 배경, 흰 텍스트)
@@ -349,6 +368,15 @@ BottomSheet 제목 및 TextField hint:
 - [ ] **AC-22 (번역 실패 언어 편집 가능)**: `translations` Map에 특정 언어의 값이 null 또는 빈 문자열인 경우(ML Kit 번역 실패), 해당 언어 행에도 편집 아이콘 버튼을 표시하고 "번역 없음 — 탭하여 직접 입력" 플레이스홀더 텍스트를 노출한다. 사용자는 편집 아이콘을 통해 직접 번역을 입력하고 저장할 수 있다. 이 경우 AC-18의 [저장] 비활성화 조건 중 "기존 번역과 동일" 조항은 적용하지 않는다(비교 원본이 없으므로).
 
 - [ ] **AC-23 (3개 언어 번역 전부 실패 카드 표시)**: `translations` Map의 3개 언어 값이 모두 null 또는 빈 문자열인 카드(번역 완전 실패 카드)도 카드 목록에 정상 표시된다. 공개 상태에서는 3개 언어 번역 행 모두 "번역 없음 — 탭하여 직접 입력" 플레이스홀더로 표시되며, 각 행에 편집 아이콘이 표시되어 사용자가 직접 입력 가능하다.
+
+- [ ] **AC-24 (최근 추가 필터 — 7일 경계 계산)**: "최근 추가" 필터는 `WordCard.createdAt` 기준 **현재 시각으로부터 7일 이내** 에 생성된 카드만 표시한다. 경계 계산 규칙:
+  - 기준값: `val sevenDaysAgo = System.currentTimeMillis() - 7L * 24 * 60 * 60 * 1000L` (= 7일 = 604,800,000 ms)
+  - 필터 조건: `card.createdAt >= sevenDaysAgo` (하한 경계 포함, inclusive)
+  - 정렬: 기존 목록 정렬 기준(`createdAt DESC`)을 유지
+  - 시점 계산은 UI 렌더 시점이 아닌 ViewModel 에서 Flow 결합 시점의 `System.currentTimeMillis()` 를 사용하며, Flow 가 재방출(즐겨찾기 토글·숙련도 선택 등)될 때마다 재평가된다. 사용자가 FlashCard 탭에 장시간 머물며 자정을 넘겨도 현재 카드가 즉시 사라질 필요는 없다(다음 Flow 재방출 시 반영).
+  - 타임존: `System.currentTimeMillis()` 의 UTC epoch millis 기준. 현지 자정 기반 캘린더 경계가 아닌 롤링 168시간 윈도우.
+
+- [ ] **AC-25 (필터 상호 배타성)**: 4개 필터 칩 중 항상 **정확히 하나** 만 선택 상태(`filled`)이다. 사용자가 다른 칩을 탭하면 이전 선택은 자동으로 해제(`outlined`)되고 `filterState` 는 새 값으로 교체된다. 현재 선택된 칩을 다시 탭하면 상태는 변경되지 않는다(토글로 `All` 로 되돌아가지 않음 — 기본값 `All` 로의 복귀는 "전체" 칩 탭으로만 수행).
 
 ### planned (Phase 2)
 

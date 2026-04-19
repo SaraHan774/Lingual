@@ -18,4 +18,9 @@
     <string name="language_name_en">영어</string>
     <string name="language_name_ja">일본어</string>
     <string name="language_name_zh">중국어</string>
+
+    <!-- FlashCard: 필터 칩 "최근 추가" (AC-9/AC-24) -->
+    <string name="flashcard_filter_recently_added">최근 추가</string>
+    <!-- FlashCard: 최근 추가 필터 Empty State (AC-14) — 다음 행동 제시 포함 -->
+    <string name="flashcard_empty_recently_added">최근 7일 내에 추가된 카드가 없습니다.\n일기를 작성하고 단어 카드를 추가해 보세요.</string>
 </resources>

@@ -18,4 +18,9 @@
     <string name="language_name_en">English</string>
     <string name="language_name_ja">Japanese</string>
     <string name="language_name_zh">Chinese</string>
+
+    <!-- FlashCard: "Recently Added" filter chip (AC-9/AC-24) -->
+    <string name="flashcard_filter_recently_added">Recent</string>
+    <!-- FlashCard: Recently Added filter Empty State (AC-14) — includes next action -->
+    <string name="flashcard_empty_recently_added">No cards added in the last 7 days.\nWrite a diary entry and add some word cards.</string>
 </resources>

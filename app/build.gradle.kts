@@ -82,6 +82,8 @@ android {
     }
     buildFeatures {
         compose = true
+        // BuildConfig.DEBUG 참조를 위해 활성화 (QA 마커 `Log.d("QA", ...)` debug-only 가드에 사용).
+        buildConfig = true
     }
 }
 

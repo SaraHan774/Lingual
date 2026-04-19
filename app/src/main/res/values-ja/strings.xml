@@ -18,4 +18,9 @@
     <string name="language_name_en">英語</string>
     <string name="language_name_ja">日本語</string>
     <string name="language_name_zh">中国語</string>
+
+    <!-- FlashCard: 「最近追加」フィルターチップ (AC-9/AC-24) -->
+    <string name="flashcard_filter_recently_added">最近追加</string>
+    <!-- FlashCard: 最近追加フィルターのEmpty State (AC-14) — 次のアクションを提示 -->
+    <string name="flashcard_empty_recently_added">過去7日以内に追加されたカードはありません。\n日記を書いて単語カードを追加してみましょう。</string>
 </resources>

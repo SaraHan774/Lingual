@@ -4,7 +4,7 @@
 >
 > **Maintained by:** [`.claude/agents/prd-curator.md`](./.claude/agents/prd-curator.md)
 > **Supported locales:** 한국어 · English · 日本語 · 中文
-> **Last indexed:** 2026-04-19 (FlashCard 번역 수정 기능 Phase 2→in-progress 승격 — AC-17~AC-21 추가, isTranslationEdited 필드 추가)
+> **Last indexed:** 2026-04-19 (FlashCard 필터 칩에 "최근 추가 (7일 내)" 옵션 추가 — FlashCardFilter 에 RecentlyAdded 케이스, AC-9 갱신, AC-24/AC-25 신규)
 
 ---
 
@@ -32,7 +32,7 @@ Lingual은 **polyglot(다국어 학습자)을 위한 일기 앱**이다. 사용�
 - [03 — Translation (번역)](./docs/prd/03-feature-translation.md) · **status: shipped**
   ML Kit 온디바이스 번역 엔진, 언어쌍 캐싱, PENDING/SUCCESS/ERROR 상태 머신.
 - [04 — FlashCard (단어장)](./docs/prd/04-feature-flashcard.md) · **status: in-progress**
-  단어 카드 목록/숙련도/즐겨찾기 shipped. 카드 추가(원문 탭 아이콘 버튼 → TextField BottomSheet, 방안 A) · 카드 삭제 · 번역 수정 in-progress. 필터 칩·숙련도 레이블·통계 배너·Empty State·언어 배지 UI/UX 개선 in-progress (AC-9~AC-16). 번역 수정 기능(AC-17~AC-21): 카드 공개 상태에서 각 언어 번역을 직접 편집, 수정됨 인디케이터. 자동 단어 추출·단어 수정·원본 복원은 Phase 2.
+  단어 카드 목록/숙련도/즐겨찾기 shipped. 카드 추가(원문 탭 아이콘 버튼 → TextField BottomSheet, 방안 A) · 카드 삭제 · 번역 수정 in-progress. 필터 칩·숙련도 레이블·통계 배너·Empty State·언어 배지 UI/UX 개선 in-progress (AC-9~AC-16). 번역 수정 기능(AC-17~AC-21): 카드 공개 상태에서 각 언어 번역을 직접 편집, 수정됨 인디케이터. 필터 칩 "최근 추가 (7일 내)" 옵션 추가(AC-24/AC-25). 자동 단어 추출·단어 수정·원본 복원은 Phase 2.
 - [05 — TTS (음성 재생)](./docs/prd/05-feature-tts.md) · **status: shipped**
   `TextToSpeech` 기반 4개 언어 음성 재생, 재생 상태 StateFlow 공개.
 - [06 — Settings (설정)](./docs/prd/06-feature-settings.md) · **status: shipped (read-only)**

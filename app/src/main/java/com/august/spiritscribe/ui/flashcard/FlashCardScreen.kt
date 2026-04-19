@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -26,6 +27,7 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -235,27 +237,43 @@ private fun FilterChipRow(
     selected: FlashCardFilter,
     onSelect: (FlashCardFilter) -> Unit,
 ) {
-    Row(
+    // AC-9/AC-25: 네 번째 칩 "최근 추가" 추가. 좁은 화면(≤360dp)에서 일본어 전각 레이블로 overflow 되지
+    // 않도록 Row 대신 LazyRow 로 수평 스크롤 허용. 기본 화면(≥400dp)에서는 4개 모두 노출된다.
+    LazyRow(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
+            .padding(vertical = 4.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        FilterChip(
-            selected = selected == FlashCardFilter.All,
-            onClick = { onSelect(FlashCardFilter.All) },
-            label = { Text("전체") },
-        )
-        FilterChip(
-            selected = selected == FlashCardFilter.Favorites,
-            onClick = { onSelect(FlashCardFilter.Favorites) },
-            label = { Text("즐겨찾기") },
-        )
-        FilterChip(
-            selected = selected == FlashCardFilter.DueForReview,
-            onClick = { onSelect(FlashCardFilter.DueForReview) },
-            label = { Text("복습 예정") },
-        )
+        item {
+            FilterChip(
+                selected = selected == FlashCardFilter.All,
+                onClick = { onSelect(FlashCardFilter.All) },
+                label = { Text("전체") },
+            )
+        }
+        item {
+            FilterChip(
+                selected = selected == FlashCardFilter.Favorites,
+                onClick = { onSelect(FlashCardFilter.Favorites) },
+                label = { Text("즐겨찾기") },
+            )
+        }
+        item {
+            FilterChip(
+                selected = selected == FlashCardFilter.DueForReview,
+                onClick = { onSelect(FlashCardFilter.DueForReview) },
+                label = { Text("복습 예정") },
+            )
+        }
+        item {
+            FilterChip(
+                selected = selected == FlashCardFilter.RecentlyAdded,
+                onClick = { onSelect(FlashCardFilter.RecentlyAdded) },
+                label = { Text(stringResource(R.string.flashcard_filter_recently_added)) },
+            )
+        }
     }
 }
 
@@ -264,13 +282,26 @@ private fun EmptyState(
     filter: FlashCardFilter,
     modifier: Modifier = Modifier,
 ) {
-    val (icon: ImageVector, message: String) = when (filter) {
-        FlashCardFilter.All ->
-            Icons.AutoMirrored.Outlined.MenuBook to "아직 단어 카드가 없습니다.\n일기에서 단어를 추가해 보세요."
-        FlashCardFilter.Favorites ->
-            Icons.Outlined.FavoriteBorder to "즐겨찾기한 카드가 없습니다."
-        FlashCardFilter.DueForReview ->
-            Icons.Outlined.CheckCircle to "복습 예정인 카드가 없습니다."
+    val icon: ImageVector
+    val message: String
+    when (filter) {
+        FlashCardFilter.All -> {
+            icon = Icons.AutoMirrored.Outlined.MenuBook
+            message = "아직 단어 카드가 없습니다.\n일기에서 단어를 추가해 보세요."
+        }
+        FlashCardFilter.Favorites -> {
+            icon = Icons.Outlined.FavoriteBorder
+            message = "즐겨찾기한 카드가 없습니다."
+        }
+        FlashCardFilter.DueForReview -> {
+            icon = Icons.Outlined.CheckCircle
+            message = "복습 예정인 카드가 없습니다."
+        }
+        // AC-14: "최근 추가" Empty State 는 4개 언어 리소스에 "다음 행동 제시" 문구 포함.
+        FlashCardFilter.RecentlyAdded -> {
+            icon = Icons.Outlined.Schedule
+            message = stringResource(R.string.flashcard_empty_recently_added)
+        }
     }
 
     Box(

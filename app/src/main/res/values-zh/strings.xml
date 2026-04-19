@@ -18,4 +18,9 @@
     <string name="language_name_en">英语</string>
     <string name="language_name_ja">日语</string>
     <string name="language_name_zh">中文</string>
+
+    <!-- FlashCard: "最近添加" 筛选芯片 (AC-9/AC-24) -->
+    <string name="flashcard_filter_recently_added">最近添加</string>
+    <!-- FlashCard: 最近添加筛选空状态 (AC-14) — 包含下一步操作提示 -->
+    <string name="flashcard_empty_recently_added">最近7天内没有添加的卡片。\n写一篇日记并添加单词卡。</string>
 </resources>

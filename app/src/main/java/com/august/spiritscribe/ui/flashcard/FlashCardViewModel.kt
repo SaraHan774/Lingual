@@ -1,7 +1,9 @@
 package com.august.spiritscribe.ui.flashcard
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.august.spiritscribe.BuildConfig
 import com.august.spiritscribe.domain.model.AppLanguage
 import com.august.spiritscribe.domain.model.WordCard
 import com.august.spiritscribe.domain.repository.DiaryRepository
@@ -19,7 +21,12 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-enum class FlashCardFilter { All, Favorites, DueForReview }
+// AC-9/AC-24: "최근 추가 (7일 내)" 필터를 위해 RecentlyAdded 케이스 추가. 순서는 UI 노출 순서
+// (전체 → 즐겨찾기 → 복습 예정 → 최근 추가) 와 일치시켜 유지한다.
+enum class FlashCardFilter { All, Favorites, DueForReview, RecentlyAdded }
+
+// AC-24: 롤링 168시간 윈도우. 현지 자정 경계가 아닌 UTC epoch millis 기준.
+private const val SEVEN_DAYS_MS = 7L * 24 * 60 * 60 * 1000L
 
 data class FlashCardStats(
     val total: Int,
@@ -39,15 +46,25 @@ class FlashCardViewModel @Inject constructor(
     val filterState: StateFlow<FlashCardFilter> = _filterState.asStateFlow()
 
     val filteredCards: StateFlow<List<WordCard>> = combine(cards, _filterState) { list, filter ->
+        // AC-24: now 는 Flow 재방출 시점(combine 람다 실행 시점)의 System.currentTimeMillis().
+        // 즐겨찾기 토글/숙련도 선택 등으로 Flow 가 재방출될 때마다 경계가 재평가된다.
         val now = System.currentTimeMillis()
-        when (filter) {
+        val result = when (filter) {
             FlashCardFilter.All -> list
             FlashCardFilter.Favorites -> list.filter { it.isFavorite }
             FlashCardFilter.DueForReview -> list.filter { card ->
                 val due = card.nextReviewAt
                 due != null && due <= now
             }
+            FlashCardFilter.RecentlyAdded -> {
+                val sevenDaysAgo = now - SEVEN_DAYS_MS
+                list.filter { it.createdAt >= sevenDaysAgo }
+            }
         }
+        if (BuildConfig.DEBUG && filter == FlashCardFilter.RecentlyAdded) {
+            Log.d("QA", "filter:RecentlyAdded results=${result.size}")
+        }
+        result
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val stats: StateFlow<FlashCardStats> = cards.map { list ->
@@ -76,6 +93,9 @@ class FlashCardViewModel @Inject constructor(
 
     fun setFilter(filter: FlashCardFilter) {
         _filterState.value = filter
+        if (BuildConfig.DEBUG && filter == FlashCardFilter.RecentlyAdded) {
+            Log.d("QA", "filter:RecentlyAdded selected")
+        }
     }
 
     /**
