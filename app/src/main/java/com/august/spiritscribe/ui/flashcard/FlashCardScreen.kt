@@ -49,7 +49,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -68,8 +67,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.august.spiritscribe.R
 import com.august.spiritscribe.domain.model.AppLanguage
 import com.august.spiritscribe.domain.model.WordCard
-import kotlinx.coroutines.launch
-
 private val masteryLabels = listOf("모름", "어려움", "보통", "완벽")
 
 private fun languageBadgeColor(lang: AppLanguage): Color = when (lang) {
@@ -108,7 +105,6 @@ fun FlashCardScreen(
     var pendingDeleteCard by remember { mutableStateOf<WordCard?>(null) }
     var editTarget by remember { mutableStateOf<EditTranslationTarget?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
 
     val successMessage = stringResource(R.string.flashcard_edit_translation_success)
     val failureMessage = stringResource(R.string.flashcard_edit_translation_failure)
@@ -117,12 +113,12 @@ fun FlashCardScreen(
     LaunchedEffect(Unit) {
         viewModel.translationEditSucceeded.collect {
             editTarget = null
-            scope.launch { snackbarHostState.showSnackbar(successMessage) }
+            snackbarHostState.showSnackbar(successMessage)
         }
     }
     LaunchedEffect(Unit) {
         viewModel.translationEditFailed.collect {
-            scope.launch { snackbarHostState.showSnackbar(failureMessage) }
+            snackbarHostState.showSnackbar(failureMessage)
         }
     }
 
@@ -130,7 +126,7 @@ fun FlashCardScreen(
     LaunchedEffect(filteredCards, editTarget?.card?.id) {
         val current = editTarget ?: return@LaunchedEffect
         val latest = filteredCards.firstOrNull { it.id == current.card.id } ?: return@LaunchedEffect
-        if (latest !== current.card) {
+        if (latest != current.card) {
             editTarget = current.copy(card = latest)
         }
     }
@@ -545,7 +541,7 @@ private fun EditTranslationBottomSheet(
     LaunchedEffect(language) { focusRequester.requestFocus() }
 
     val trimmedNew = fieldValue.text.trim()
-    val hasOriginal = !currentTranslation.isNullOrEmpty()
+    val hasOriginal = !currentTranslation.isNullOrBlank()
     // AC-18 비활성화 조건: 기존 번역이 있으면 (동일 or 빈 값), 없으면 빈 값만.
     // 공백만 입력된 경우도 빈 값과 동일하게 취급해 저장을 막는다.
     val canSave = when {
