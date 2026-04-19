@@ -18,6 +18,7 @@ data class WordCard(
     val isFavorite: Boolean,
     val createdAt: Long,
     val updatedAt: Long,
+    val isTranslationEdited: Boolean = false,
 )
 
 private val json = Json { ignoreUnknownKeys = true; isLenient = true }
@@ -47,6 +48,7 @@ fun WordCardEntity.toDomain(): WordCard = WordCard(
     isFavorite = isFavorite,
     createdAt = createdAt,
     updatedAt = updatedAt,
+    isTranslationEdited = isTranslationEdited,
 )
 
 fun WordCard.toEntity(): WordCardEntity = WordCardEntity(
@@ -62,4 +64,5 @@ fun WordCard.toEntity(): WordCardEntity = WordCardEntity(
     isFavorite = isFavorite,
     createdAt = createdAt,
     updatedAt = updatedAt,
+    isTranslationEdited = isTranslationEdited,
 )

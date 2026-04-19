@@ -1,0 +1,21 @@
+<resources>
+    <string name="app_name">Lingual</string>
+
+    <!-- FlashCard: 翻訳編集 (AC-17~AC-23) -->
+    <string name="flashcard_edit_translation_cd">翻訳を編集</string>
+    <string name="flashcard_edit_translation_title">%1$sの翻訳を編集</string>
+    <string name="flashcard_edit_translation_hint">翻訳を直接入力してください</string>
+    <string name="flashcard_edit_translation_warning">編集後はML Kitの元の翻訳に戻すことができません</string>
+    <string name="flashcard_edit_translation_save">保存</string>
+    <string name="flashcard_edit_translation_cancel">キャンセル</string>
+    <string name="flashcard_edit_translation_success">翻訳を更新しました。</string>
+    <string name="flashcard_edit_translation_failure">翻訳の更新に失敗しました。もう一度お試しください。</string>
+    <string name="flashcard_translation_missing">翻訳なし — タップして直接入力</string>
+    <string name="flashcard_translation_edited_badge">編集済み</string>
+
+    <!-- 言語名 — BottomSheetタイトル置換用 -->
+    <string name="language_name_ko">韓国語</string>
+    <string name="language_name_en">英語</string>
+    <string name="language_name_ja">日本語</string>
+    <string name="language_name_zh">中国語</string>
+</resources>

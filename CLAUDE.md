@@ -12,7 +12,7 @@
 
 - `ui/` — Compose + `@HiltViewModel` + `collectAsStateWithLifecycle`. 기능별 `Screen` + `ViewModel` 쌍.
 - `domain/` — 모델(`DiaryEntry`, `Translation`, `WordCard`, `AppLanguage`) + `toDomain()`/`toEntity()` 매퍼 + `DiaryRepository` 인터페이스.
-- `data/` — Room (`AppDatabase` v1, `lingual.db`), `DiaryRepositoryImpl`, `TranslationEngine` 인터페이스 + `MlKitTranslationEngine`.
+- `data/` — Room (`AppDatabase` v2, `lingual.db`), `DiaryRepositoryImpl`, `TranslationEngine` 인터페이스 + `MlKitTranslationEngine`.
 - `di/` — `DatabaseModule`(DB/DAO), `RepositoryModule`(`@Binds` 구현체 ↔ 인터페이스).
 
 **Navigation** — 타입 안정 `@Serializable` 라우트. 바텀탭 4개(`Diary/Translate/FlashCard/Settings`), 디테일 라우트(`WriteDiary`/`DiaryDetail(id)`/`FlashCardStudy`)는 `hideBottomNavigationRoutes` 로 바텀바 숨김. id 추출은 `savedStateHandle.toRoute<DiaryDetail>().id`.

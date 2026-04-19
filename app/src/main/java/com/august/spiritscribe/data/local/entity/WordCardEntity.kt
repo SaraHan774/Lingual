@@ -34,4 +34,7 @@ data class WordCardEntity(
     val isFavorite: Boolean,
     val createdAt: Long,
     val updatedAt: Long,
+    // 사용자가 번역을 한 번이라도 직접 수정했으면 true. ML Kit 자동 번역과 구분해 UI 인디케이터로 사용.
+    // Room exportSchema=false + destructive rebuild 전제이므로 기본값만 두고 마이그레이션은 생략한다.
+    val isTranslationEdited: Boolean = false,
 )

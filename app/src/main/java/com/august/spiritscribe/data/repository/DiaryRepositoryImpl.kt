@@ -3,6 +3,7 @@ package com.august.spiritscribe.data.repository
 import com.august.spiritscribe.data.local.dao.DiaryEntryDao
 import com.august.spiritscribe.data.local.dao.TranslationDao
 import com.august.spiritscribe.data.local.dao.WordCardDao
+import com.august.spiritscribe.domain.model.AppLanguage
 import com.august.spiritscribe.domain.model.DiaryEntry
 import com.august.spiritscribe.domain.model.Translation
 import com.august.spiritscribe.domain.model.WordCard
@@ -66,6 +67,23 @@ class DiaryRepositoryImpl @Inject constructor(
 
     override suspend fun updateWordCard(card: WordCard) {
         wordCardDao.update(card.toEntity())
+    }
+
+    override suspend fun updateTranslation(
+        wordCardId: String,
+        language: AppLanguage,
+        newTranslation: String,
+    ): WordCard? {
+        val existing = wordCardDao.getById(wordCardId)?.toDomain() ?: return null
+        val updated = existing.copy(
+            translations = existing.translations.toMutableMap().apply {
+                this[language] = newTranslation
+            },
+            isTranslationEdited = true,
+            updatedAt = System.currentTimeMillis(),
+        )
+        wordCardDao.update(updated.toEntity())
+        return updated
     }
 
     override suspend fun deleteWordCard(id: String) {

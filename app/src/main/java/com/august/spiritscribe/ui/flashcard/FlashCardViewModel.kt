@@ -2,12 +2,16 @@ package com.august.spiritscribe.ui.flashcard
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.august.spiritscribe.domain.model.AppLanguage
 import com.august.spiritscribe.domain.model.WordCard
 import com.august.spiritscribe.domain.repository.DiaryRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
@@ -62,8 +66,40 @@ class FlashCardViewModel @Inject constructor(
         FlashCardStats(0, 0, 0),
     )
 
+    // 번역 수정 성공/실패 one-shot 이벤트. SharedFlow(replay=0) 로 Composition 재생성 시
+    // 과거 이벤트가 재방출되지 않도록 한다 (CLAUDE.md one-shot 이벤트 규칙).
+    private val _translationEditSucceeded = MutableSharedFlow<Unit>(replay = 0, extraBufferCapacity = 1)
+    val translationEditSucceeded: SharedFlow<Unit> = _translationEditSucceeded.asSharedFlow()
+
+    private val _translationEditFailed = MutableSharedFlow<Unit>(replay = 0, extraBufferCapacity = 1)
+    val translationEditFailed: SharedFlow<Unit> = _translationEditFailed.asSharedFlow()
+
     fun setFilter(filter: FlashCardFilter) {
         _filterState.value = filter
+    }
+
+    /**
+     * 사용자가 BottomSheet 에서 저장한 번역을 영속화한다.
+     *
+     * 성공 시 [translationEditSucceeded] 방출 → UI 가 스낵바 + 시트 닫기. 실패 시 [translationEditFailed]
+     * 방출 → UI 가 에러 스낵바 + 시트 유지 (AC-19).
+     */
+    fun updateTranslation(
+        wordCardId: String,
+        language: AppLanguage,
+        newTranslation: String,
+    ) {
+        viewModelScope.launch {
+            val result = runCatching {
+                repository.updateTranslation(wordCardId, language, newTranslation)
+            }
+            val updated = result.getOrNull()
+            if (result.isSuccess && updated != null) {
+                _translationEditSucceeded.tryEmit(Unit)
+            } else {
+                _translationEditFailed.tryEmit(Unit)
+            }
+        }
     }
 
     fun updateMastery(card: WordCard, newLevel: Int) {

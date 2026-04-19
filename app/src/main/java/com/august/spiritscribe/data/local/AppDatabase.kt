@@ -15,7 +15,9 @@ import com.august.spiritscribe.data.local.entity.WordCardEntity
         TranslationEntity::class,
         WordCardEntity::class,
     ],
-    version = 1,
+    // v2 (2026-04-19): WordCardEntity.isTranslationEdited 컬럼 추가.
+    // fallbackToDestructiveMigration() 이 활성화돼 있어 기존 DB 는 새 스키마로 재생성된다.
+    version = 2,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {

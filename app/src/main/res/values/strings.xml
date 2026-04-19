@@ -1,3 +1,21 @@
 <resources>
     <string name="app_name">Lingual</string>
+
+    <!-- FlashCard: 번역 수정 기능 (AC-17~AC-23) -->
+    <string name="flashcard_edit_translation_cd">번역 수정</string>
+    <string name="flashcard_edit_translation_title">%1$s 번역 수정</string>
+    <string name="flashcard_edit_translation_hint">번역을 직접 입력하세요</string>
+    <string name="flashcard_edit_translation_warning">수정 후 ML Kit 원본 번역을 복원할 수 없습니다</string>
+    <string name="flashcard_edit_translation_save">저장</string>
+    <string name="flashcard_edit_translation_cancel">취소</string>
+    <string name="flashcard_edit_translation_success">번역이 수정되었습니다.</string>
+    <string name="flashcard_edit_translation_failure">번역 수정에 실패했습니다. 다시 시도해 주세요.</string>
+    <string name="flashcard_translation_missing">번역 없음 — 탭하여 직접 입력</string>
+    <string name="flashcard_translation_edited_badge">수정됨</string>
+
+    <!-- 언어명 — BottomSheet 제목 치환용 (AC-21: 앱 UI 언어 현지화) -->
+    <string name="language_name_ko">한국어</string>
+    <string name="language_name_en">영어</string>
+    <string name="language_name_ja">일본어</string>
+    <string name="language_name_zh">중국어</string>
 </resources>

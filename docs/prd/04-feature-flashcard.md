@@ -7,6 +7,9 @@
 > - 2026-04-18 `/ship wordcard-feature` iter 1 — 카드 추가 UI · 카드 삭제 UI를 `in-progress`로 승격. Open Questions 두 건 AC로 확정.
 > - 2026-04-18 `/ship flashcard-ui-ux` iter 1 — FlashCard 화면 UI/UX 개선 7건 AC-9~AC-15로 추가. UX Flow B 갱신.
 > - 2026-04-18 `/ship flashcard-ui-ux` iter 2 — [CRITICAL] nextReviewAt을 v0.1에서 활성화(masteryLevel별 고정 간격). 데이터 모델 "미사용" 표시 제거. AC-10 조건 구체화, AC-11 reviewCount 갱신 명시, AC-13 오늘 복습 예정 수치 추가, AC-15 색상 팔레트 정의, AC-16(신규) 숙련도 선택 시 nextReviewAt 자동 설정 추가. UX Flow B에 카드 자동 접힘 없음 결정 사항 추가.
+> - 2026-04-18 `/ship wordcard-add-ux` iter 1 — 카드 추가 UX를 아이콘 버튼 + TextField BottomSheet 방식(방안 A)으로 전면 교체. `SelectionContainer` + `WordCardTextToolbar` 방식(Copy 납치 + 클립보드 프로브) 폐기. AC-1/AC-2 재정의, UX Flow A 전면 교체, Open Questions "카드 추가 UI 구현 방식" 항목 확정 처리.
+> - 2026-04-19 `/ship wordcard-translation-edit` iter 1 — 번역 수정 기능을 Phase 2에서 v0.1 in-progress로 승격. Non-Goals에서 분리(단어 자체 수정은 Phase 2 유지). AC-17~AC-21 신규 추가. UX Flow D(번역 수정) 추가. 데이터 모델에 `isTranslationEdited` 필드 추가. Open Questions 2건 추가.
+> - 2026-04-19 `/ship wordcard-translation-edit` iter 2 — prd-reviewer NEEDS_SPEC 피드백 4건 반영: AC-19 에러 스낵바 + BottomSheet 유지 조항 추가; UX Flow D 및 AC-19에 파괴적 덮어쓰기 경고 텍스트 추가; 번역 실패/빈 값 언어 처리 AC-22(신규)·AC-23(신규) 추가 및 AC-18 [저장] 비활성화 조건 예외 명기; 수정 인디케이터 위치를 공개 상태 전용으로 확정하여 AC-20 갱신 + Open Questions 항목 해소.
 
 ---
 
@@ -22,18 +25,21 @@
 - 학습 세션 UI(`FlashCardStudy` 라우트 연결) — Phase 2.
 - 카드 공유/마켓 — 개인 덱 전용.
 - 자동 단어 추출 — Phase 2. 현재는 수동 선택만.
-- 카드 편집(단어/번역 직접 수정) — Phase 2.
+- 카드 단어(`word` 필드) 직접 수정 — Phase 2.
+- ML Kit 원본 번역 복원 기능(수정 전 번역값으로 되돌리기) — Phase 2.
+- 번역 수정 이력 관리 — Phase 2.
 
 ---
 
 ## User Stories
 
-1. **추가 (수동)**: 사용자로서, 일기 상세 화면에서 텍스트를 롱프레스(또는 선택)하여 "단어 카드로 저장" 옵션을 통해 카드를 만들 수 있다. 카드 저장 시 해당 단어가 ML Kit으로 나머지 3개 언어로 자동 번역되어 채워진다.
+1. **추가 (수동)**: 사용자로서, 일기 상세 화면의 원문 탭에서 "단어 카드 추가" 아이콘 버튼을 탭하고, BottomSheet 내 TextField에 단어/표현을 직접 입력하여 카드를 만들 수 있다. 카드 저장 시 해당 단어가 ML Kit으로 나머지 3개 언어로 자동 번역되어 채워진다.
 2. **목록**: 사용자로서, FlashCard 탭에서 내가 저장한 카드 목록을 최신순으로 볼 수 있다.
 3. **학습 (플립)**: 사용자로서, 카드를 탭하면 나머지 3개 언어 번역이 공개되고, 숙련도 Lv 0–3 중 하나를 선택해 복습 기록을 남길 수 있다.
 4. **즐겨찾기**: 사용자로서, 하트 아이콘으로 카드를 즐겨찾기 하여 우선 복습할 수 있다.
 5. **삭제**: 사용자로서, 카드 목록에서 카드를 삭제하여 덱을 관리할 수 있다.
-6. **발음**: 사용자로서, 카드에 저장된 단어를 TTS로 들을 수 있다. *(Phase 2 후보)*
+6. **번역 수정**: 사용자로서, 카드의 특정 언어 번역이 오역이거나 맥락에 맞지 않을 때, 해당 번역을 직접 편집하여 정확한 번역으로 수정할 수 있다. 수정된 번역은 학습 화면과 복습에서 일관되게 반영된다.
+7. **발음**: 사용자로서, 카드에 저장된 단어를 TTS로 들을 수 있다. *(Phase 2 후보)*
 
 ---
 
@@ -42,17 +48,23 @@
 ### A. 카드 추가 — DiaryDetailScreen
 
 ```
-[DiaryDetailScreen] — 언어 탭(원문 탭 활성)
-  └─ 본문 텍스트를 롱프레스 → 시스템 텍스트 선택 핸들 표시
-        └─ 선택 완료 후 상단 컨텍스트 메뉴에 "카드 추가" 항목 노출
-              └─ 탭 → AddWordCardBottomSheet (또는 다이얼로그) 표시
-                    ├─ 선택된 단어 표시 (편집 불가, 확인용)
-                    ├─ 번역 중 스피너 (ML Kit 호출 진행)
-                    └─ [저장] 버튼 → 번역 완료 후 WordCard 저장
-                          └─ 스낵바: "단어 카드가 저장되었습니다."
+[DiaryDetailScreen] — 원문 탭 활성
+  └─ 탭 헤더 우측(또는 본문 상단 우측) "단어 카드 추가" 아이콘 버튼 (항상 표시)
+        └─ 탭 → AddWordCardBottomSheet 열림
+              ├─ 제목: "단어 카드 추가"
+              ├─ TextField: 단어/표현 직접 입력 (키보드 자동 오픈, hint: "단어 또는 표현 입력")
+              ├─ 원문 언어 표시 레이블 (예: "원문: 한국어")
+              ├─ [저장] 버튼 — TextField가 비어 있으면 비활성화(disabled)
+              │     └─ 탭 시:
+              │           ├─ 번역 진행 스피너 (ML Kit 3개 언어 병렬 호출)
+              │           ├─ 번역 완료 → WordCard 저장
+              │           └─ 저장 완료 → BottomSheet 닫힘 + 스낵바: "단어 카드가 저장되었습니다."
+              └─ [취소] 또는 시트 드래그 다운 → BottomSheet 닫힘 (저장 없음)
 ```
 
-> **결정된 사항 (2026-04-18):** 텍스트 선택 후 컨텍스트 메뉴 방식 채택. 별도 "+ 단어" 버튼은 사용하지 않는다. 컨텍스트 메뉴는 Compose `SelectionContainer` + `ContextMenuArea` 패턴 또는 `BasicTextField`의 `onTextLayout` 콜백으로 구현한다.
+> **결정된 사항 (2026-04-18, wordcard-add-ux):** 아이콘 버튼 + TextField 입력 방식(방안 A) 채택. 이전 `SelectionContainer` + `WordCardTextToolbar`(Copy 납치 + 클립보드 프로브) 방식은 발견 불가능성·클립보드 오염·Copy 버튼 납치 문제로 폐기.
+> **결정된 사항 (2026-04-18, wordcard-add-ux):** "단어 카드 추가" 아이콘 버튼은 **원문 탭에서만** 표시한다. 번역 탭에서는 표시하지 않는다. 이유: 카드의 `sourceLanguage`는 원문 언어로 저장되며, 번역 탭 텍스트를 카드 원문으로 저장하면 언어 메타데이터가 모호해진다.
+> **결정된 사항 (2026-04-18, wordcard-add-ux):** `SelectionContainer` 전체 제거. 복사 기능은 Android 시스템 기본 텍스트 선택 UI로 대체(별도 `CompositionLocalProvider` 불필요).
 
 ### B. 카드 목록 — FlashCardScreen
 
@@ -99,6 +111,45 @@
               └─ [취소] → 다이얼로그 닫기
 ```
 
+### D. 번역 수정 — FlashCardScreen (카드 공개 상태)
+
+```
+[FlashCardScreen] — 카드 아이템 (revealed 상태)
+  └─ 각 번역 항목 행
+        ├─ [언어 배지] [번역 텍스트]   ← 기존 표시 (번역 실패/null인 경우: "번역 없음 — 탭하여 직접 입력")
+        └─ 오른쪽: "편집" 아이콘 버튼 (pencil icon)  ← 번역 실패 언어도 편집 아이콘 표시
+              └─ 탭 → EditTranslationBottomSheet 열림
+                    ├─ 제목: "<언어 이름> 번역 수정" (예: "영어 번역 수정")
+                    ├─ 현재 번역값이 채워진 TextField (전체 선택 상태로 포커스)
+                    │     └─ 번역 실패/null인 경우 빈 TextField로 열림 (hint: "번역을 직접 입력하세요")
+                    ├─ 수정됨 인디케이터: 해당 번역이 이미 사용자 수정본이면
+                    │     "사용자 수정" 배지 또는 안내 문구 표시
+                    ├─ 경고 보조 텍스트: "수정 후 ML Kit 원본 번역을 복원할 수 없습니다"
+                    │     (항상 표시 — 파괴적 덮어쓰기 사전 고지)
+                    ├─ [저장] 버튼
+                    │     └─ 비활성화 조건:
+                    │           ├─ 기존 번역이 있는 경우: TextField가 기존 번역과 동일하거나 빈 값이면 비활성화
+                    │           └─ 번역 실패/null인 경우: TextField가 빈 값이면 비활성화 (동일값 조건 제외)
+                    │     └─ 활성화 시 탭:
+                    │           ├─ repository.updateWordCard(card.copy(translations=..., isTranslationEdited=true)) 호출
+                    │           ├─ 성공: BottomSheet 닫힘 + 스낵바 "번역이 수정되었습니다."
+                    │           └─ 실패: 에러 스낵바 "번역 수정에 실패했습니다. 다시 시도해 주세요." + BottomSheet 유지
+                    └─ [취소] 또는 드래그 다운 → BottomSheet 닫힘 (변경 없음)
+
+[FlashCardScreen] — 카드 아이템 (revealed 상태) — 번역 3개 전부 실패한 카드
+  └─ 번역 항목 3행 모두 "번역 없음 — 탭하여 직접 입력" 플레이스홀더로 표시
+        └─ 각 행 오른쪽: 편집 아이콘 버튼 (동일 흐름)
+```
+
+> **결정된 사항 (2026-04-19, wordcard-translation-edit):** 번역 수정 진입점은 카드 공개(revealed) 상태의 각 번역 항목 행에 위치한 편집 아이콘 버튼이다. 미공개 상태에서는 편집 아이콘이 표시되지 않는다.
+> **결정된 사항 (2026-04-19, wordcard-translation-edit):** 수정 대상은 `translations` Map의 특정 언어 값만이다. `word`(원문 단어) 수정은 Phase 2 스코프이며 이 흐름에서 다루지 않는다.
+> **결정된 사항 (2026-04-19, wordcard-translation-edit):** 사용자가 한 번이라도 번역을 수정한 카드에는 `isTranslationEdited = true` 플래그를 세워 UI에서 인디케이터로 표시한다. 어느 언어를 수정했는지 언어별 세분화 플래그는 Phase 2.
+> **결정된 사항 (2026-04-19, wordcard-translation-edit):** ML Kit 원본 번역값 보존(복원 기능)은 Phase 2. v0.1은 덮어쓰기만 지원한다.
+> **결정된 사항 (2026-04-19, wordcard-translation-edit iter 2):** 번역 실패/null인 언어도 편집 아이콘을 표시하여 사용자가 직접 입력할 수 있다. 이 경우 [저장] 비활성화의 "기존 번역과 동일" 조건은 적용하지 않는다(비교할 원본이 없으므로). 빈 값 비활성화 조건만 적용.
+> **결정된 사항 (2026-04-19, wordcard-translation-edit iter 2):** BottomSheet 내에 "수정 후 ML Kit 원본 번역을 복원할 수 없습니다" 경고 보조 텍스트를 항상 표시하여 파괴적 덮어쓰기를 사전 고지한다.
+> **결정된 사항 (2026-04-19, wordcard-translation-edit iter 2):** 저장 실패 시 에러 스낵바를 표시하고 BottomSheet은 닫지 않는다.
+> **결정된 사항 (2026-04-19, wordcard-translation-edit iter 2):** "수정됨" 배지는 공개(revealed) 상태에서만 표시한다. 카드 헤더(미공개 상태 포함)에는 표시하지 않는다. 이유: 헤더 복잡도 최소화, 학습 흐름 자연스러움.
+
 ---
 
 ## Data Model
@@ -117,8 +168,11 @@
 | `nextReviewAt` | Long? | 다음 복습 시각. masteryLevel 선택 시 고정 간격으로 자동 설정: Lv 0 → +1일, Lv 1 → +3일, Lv 2 → +7일, Lv 3 → +30일. null이면 아직 숙련도가 한 번도 기록되지 않은 상태 |
 | `reviewCount` | Int | 복습 횟수 |
 | `isFavorite` | Boolean | 즐겨찾기 |
+| `isTranslationEdited` | Boolean | 사용자가 번역을 한 번이라도 수정했으면 `true`. 기본값 `false`. ML Kit 자동 번역과 사용자 수정 번역을 UI에서 구분하는 데 사용 |
 
 JSON 직렬화 규칙: `MapSerializer(String.serializer(), String.serializer())`를 반드시 명시. reified 오버로드 금지 (CLAUDE.md 참조).
+
+> **스키마 변경 주의 (2026-04-19):** `isTranslationEdited` 필드 추가는 `WordCardEntity`에 새 컬럼을 필요로 한다. Room `exportSchema = false`이므로 `version` bump 시 destructive rebuild가 발생한다. 기존 카드 데이터가 초기화되므로, 마이그레이션 스크립트(`ALTER TABLE word_cards ADD COLUMN isTranslationEdited INTEGER NOT NULL DEFAULT 0`)를 작성하거나 개발 단계임을 확인 후 rebuild를 선택한다. v0.1 MVP이므로 destructive rebuild 허용 — 단, 구현 단계에서 명시적으로 확인할 것.
 
 ### 단어 번역 소스 결정
 
@@ -132,7 +186,7 @@ JSON 직렬화 규칙: `MapSerializer(String.serializer(), String.serializer())`
 
 ## 다국어 UI 문자열 예시
 
-카드 추가 컨텍스트 메뉴 레이블:
+카드 추가 아이콘 버튼 접근성 레이블 (contentDescription):
 
 | 언어 | 표시 문자 |
 |------|-----------|
@@ -140,6 +194,13 @@ JSON 직렬화 규칙: `MapSerializer(String.serializer(), String.serializer())`
 | English | Add to flashcards |
 | 日本語 | 単語カードに追加 |
 | 中文 | 添加到单词卡 |
+
+BottomSheet 제목 및 TextField hint:
+
+| 구분 | 한국어 | English | 日本語 | 中文 |
+|------|--------|---------|--------|------|
+| BottomSheet 제목 | 단어 카드 추가 | Add Word Card | 単語カードを追加 | 添加单词卡 |
+| TextField hint | 단어 또는 표현 입력 | Enter a word or phrase | 単語やフレーズを入力 | 输入单词或短语 |
 
 빈 상태 메시지 (전체 필터):
 
@@ -185,6 +246,54 @@ JSON 직렬화 규칙: `MapSerializer(String.serializer(), String.serializer())`
 | 즐겨찾기 | 즐겨찾기 | Favorites | お気に入り | 收藏 |
 | 복습 예정 | 복습 예정 | Due | 復習予定 | 待复习 |
 
+번역 수정 편집 아이콘 접근성 레이블 (contentDescription):
+
+| 언어 | 표시 문자 |
+|------|-----------|
+| 한국어 | 번역 수정 |
+| English | Edit translation |
+| 日本語 | 翻訳を編集 |
+| 中文 | 编辑翻译 |
+
+번역 수정 BottomSheet 제목 (언어명은 런타임 치환):
+
+| 구분 | 한국어 | English | 日本語 | 中文 |
+|------|--------|---------|--------|------|
+| BottomSheet 제목 | {언어명} 번역 수정 | Edit {language} translation | {言語名}の翻訳を編集 | 编辑{语言}翻译 |
+| TextField hint (번역 실패 시) | 번역을 직접 입력하세요 | Enter translation manually | 翻訳を直接入力してください | 请直接输入翻译 |
+| 파괴적 덮어쓰기 경고 보조 텍스트 | 수정 후 ML Kit 원본 번역을 복원할 수 없습니다 | Original ML Kit translation cannot be restored after editing | 編集後はML Kitの元の翻訳に戻すことができません | 编辑后无法恢复ML Kit原始翻译 |
+| 저장 버튼 | 저장 | Save | 保存 | 保存 |
+| 취소 버튼 | 취소 | Cancel | キャンセル | 取消 |
+| 저장 완료 스낵바 | 번역이 수정되었습니다. | Translation updated. | 翻訳を更新しました。 | 翻译已更新。 |
+| 저장 실패 에러 스낵바 | 번역 수정에 실패했습니다. 다시 시도해 주세요. | Failed to update translation. Please try again. | 翻訳の更新に失敗しました。もう一度お試しください。 | 翻译更新失败，请重试。 |
+
+번역 실패 플레이스홀더 (번역 없는 언어 행에 표시):
+
+| 언어 | 표시 문자 |
+|------|-----------|
+| 한국어 | 번역 없음 — 탭하여 직접 입력 |
+| English | No translation — tap to enter manually |
+| 日本語 | 翻訳なし — タップして直接入力 |
+| 中文 | 无翻译 — 点击直接输入 |
+
+언어명 (BottomSheet 제목 치환용):
+
+| AppLanguage | 한국어 표시 | English 표시 | 日本語 표시 | 中文 표시 |
+|-------------|------------|-------------|------------|----------|
+| KO | 한국어 | Korean | 韓国語 | 韩语 |
+| EN | 영어 | English | 英語 | 英语 |
+| JA | 일본어 | Japanese | 日本語 | 日语 |
+| ZH | 중국어 | Chinese | 中国語 | 中文 |
+
+사용자 수정 인디케이터 (`isTranslationEdited = true`인 카드에 표시):
+
+| 언어 | 표시 문자 |
+|------|-----------|
+| 한국어 | 수정됨 |
+| English | Edited |
+| 日本語 | 編集済み |
+| 中文 | 已编辑 |
+
 ---
 
 ## Acceptance Criteria
@@ -199,8 +308,8 @@ JSON 직렬화 규칙: `MapSerializer(String.serializer(), String.serializer())`
 
 ### in-progress (이번 사이클 구현 대상)
 
-- [ ] **AC-1 (카드 추가 진입)**: `DiaryDetailScreen`의 원문 탭 본문에서 텍스트를 선택하면 "단어 카드 추가" 액션이 컨텍스트 메뉴 또는 액션 버튼으로 노출된다.
-- [ ] **AC-2 (카드 생성 시트)**: "단어 카드 추가" 액션 실행 시 선택된 단어와 번역 진행 상태를 보여주는 BottomSheet(또는 AlertDialog)가 표시된다. 번역이 완료되면 [저장] 버튼이 활성화된다.
+- [ ] **AC-1 (카드 추가 진입)**: `DiaryDetailScreen` 원문 탭 활성 시 탭 헤더 또는 본문 상단 우측에 "단어 카드 추가" 아이콘 버튼이 **항상** 표시된다. 번역 탭 활성 시에는 해당 버튼이 숨겨진다. `SelectionContainer` / `WordCardTextToolbar` / 클립보드 프로브 코드를 사용하지 않는다.
+- [ ] **AC-2 (카드 생성 시트)**: 아이콘 버튼 탭 시 `AddWordCardBottomSheet`가 열리며, 내부에 단어/표현 직접 입력을 위한 `TextField`(키보드 자동 오픈), 원문 언어 표시 레이블, [저장] 버튼이 포함된다. TextField가 비어 있으면 [저장] 버튼은 비활성화된다. [저장] 버튼 탭 시 ML Kit 번역 진행 스피너가 표시되고 번역 완료 후 카드가 저장된다.
 - [ ] **AC-3 (번역 자동 채움)**: 카드 저장 시 `TranslationEngine.translate(word, sourceLanguage, targetLanguage)`를 나머지 3개 언어에 대해 병렬 호출하여 `WordCard.translations`에 채운다. 첫 모델 다운로드 이후 동일 언어쌍은 네트워크 없이 3초 이내 응답.
 - [ ] **AC-4 (저장 완료 피드백)**: 카드 저장 완료 후 스낵바 "단어 카드가 저장되었습니다."가 표시된다. 동일 단어 중복 저장 시에도 별도 카드로 저장되며 동일 스낵바가 표시된다.
 - [ ] **AC-5 (카드 삭제)**: `FlashCardScreen` 카드 아이템의 삭제 아이콘(휴지통)은 **카드가 공개(revealed) 상태일 때만** 표시된다. 탭 시 확인 다이얼로그가 표시되고, 확인하면 `repository.deleteWordCard(id)`가 호출되어 목록에서 즉시 제거된다.
@@ -227,6 +336,20 @@ JSON 직렬화 규칙: `MapSerializer(String.serializer(), String.serializer())`
   - Lv 3 (완벽): 현재 시각 + 30일
   - 계산 기준: `System.currentTimeMillis() + intervalDays * 24 * 60 * 60 * 1000L`
 
+- [ ] **AC-17 (번역 수정 진입)**: 카드 공개(revealed) 상태의 각 번역 항목 행 오른쪽에 편집 아이콘 버튼(pencil icon)이 표시된다. 카드 미공개 상태에서는 편집 아이콘이 표시되지 않는다.
+
+- [ ] **AC-18 (번역 수정 시트)**: 편집 아이콘 버튼 탭 시 `EditTranslationBottomSheet`가 열린다. 시트에는 (1) 대상 언어명이 포함된 제목(예: "영어 번역 수정"), (2) 현재 번역값이 전체 선택 상태로 채워진 `TextField`(키보드 자동 오픈; 번역 실패/null인 경우 빈 TextField에 hint "번역을 직접 입력하세요"로 표시), (3) "수정 후 ML Kit 원본 번역을 복원할 수 없습니다" 경고 보조 텍스트(항상 표시), (4) [저장] 버튼, (5) [취소] 버튼이 포함된다. [저장] 버튼 비활성화 조건: 기존 번역이 있는 경우 TextField가 기존 번역과 동일하거나 비어 있으면 비활성화; 번역 실패/null인 경우 빈 값이면 비활성화(동일값 조건 미적용).
+
+- [ ] **AC-19 (번역 수정 저장)**: [저장] 버튼 탭 시 해당 언어 번역만 수정된 `translations` Map을 가진 카드가 `repository.updateWordCard()`로 저장된다. `isTranslationEdited`가 `true`로 갱신된다. 저장 성공 시 BottomSheet이 닫히고 스낵바 "번역이 수정되었습니다."가 표시된다. 카드 목록의 해당 번역 텍스트가 즉시 갱신된다 (Flow 구독 경유). 저장 실패 시 에러 스낵바 "번역 수정에 실패했습니다. 다시 시도해 주세요."를 표시하고 BottomSheet은 닫지 않는다(사용자가 재시도 가능한 상태 유지).
+
+- [ ] **AC-20 (수정 인디케이터)**: `isTranslationEdited = true`인 카드에는 카드 공개(revealed) 상태에서만 "수정됨" 배지(텍스트 또는 아이콘)가 표시된다. 카드 헤더(미공개 상태 포함)에는 표시하지 않는다. 해당 배지는 사용자가 ML Kit 자동 번역이 아닌 직접 수정한 번역이 있음을 인지할 수 있도록 한다. 이유: 헤더 복잡도 최소화 및 학습 흐름 자연스러움.
+
+- [ ] **AC-21 (언어 코드 일관성)**: 번역 수정 저장 시 `translations` Map 키는 반드시 `AppLanguage` enum 경유. 하드코딩된 문자열 금지. `BottomSheet` 내 언어 이름 표시는 앱 UI 언어(한국어 기준 v0.1)에 따라 현지화된다.
+
+- [ ] **AC-22 (번역 실패 언어 편집 가능)**: `translations` Map에 특정 언어의 값이 null 또는 빈 문자열인 경우(ML Kit 번역 실패), 해당 언어 행에도 편집 아이콘 버튼을 표시하고 "번역 없음 — 탭하여 직접 입력" 플레이스홀더 텍스트를 노출한다. 사용자는 편집 아이콘을 통해 직접 번역을 입력하고 저장할 수 있다. 이 경우 AC-18의 [저장] 비활성화 조건 중 "기존 번역과 동일" 조항은 적용하지 않는다(비교 원본이 없으므로).
+
+- [ ] **AC-23 (3개 언어 번역 전부 실패 카드 표시)**: `translations` Map의 3개 언어 값이 모두 null 또는 빈 문자열인 카드(번역 완전 실패 카드)도 카드 목록에 정상 표시된다. 공개 상태에서는 3개 언어 번역 행 모두 "번역 없음 — 탭하여 직접 입력" 플레이스홀더로 표시되며, 각 행에 편집 아이콘이 표시되어 사용자가 직접 입력 가능하다.
+
 ### planned (Phase 2)
 
 - [ ] 일기 저장 시 단어 자동 추출 및 사용자 승인 플로우.
@@ -234,7 +357,9 @@ JSON 직렬화 규칙: `MapSerializer(String.serializer(), String.serializer())`
 - [ ] `nextReviewAt` 간격 고도화 — SM-2 lite 알고리즘으로 개인화된 간격 반복. v0.1의 고정 간격(AC-16)을 대체.
 - [ ] 카드 TTS 재생 (각 언어별 단어 발음).
 - [ ] 예문 자동 채움 (`exampleSentences` 필드 활성화).
-- [ ] 카드 편집 (단어/번역 직접 수정).
+- [ ] 카드 단어(`word` 필드) 직접 수정.
+- [ ] 번역 수정 이력 관리 — 언어별 수정 여부 세분화 플래그, 수정 시각 기록.
+- [ ] ML Kit 원본 번역 복원 — 수정 전 번역값으로 되돌리기.
 
 ---
 
@@ -252,7 +377,9 @@ JSON 직렬화 규칙: `MapSerializer(String.serializer(), String.serializer())`
 ## Open Questions
 
 - **TTS 연동**: 카드 상세(공개 상태)에서 각 언어 번역 단어를 TTS로 들을 수 있어야 하는가? Phase 2에서 다루는 것으로 잠정 결정. 우선순위가 높다면 이번 사이클에 포함 가능.
-- **카드 추가 UI 구현 방식**: Compose `SelectionContainer` + `ContextMenuArea` 조합 가능 여부를 실제 구현에서 검증 필요. 텍스트 선택 API가 제한적일 경우 "선택된 텍스트를 TextField에 수동 입력하는 다이얼로그" 방식으로 폴백 허용 여부를 coder가 판단하여 사용자에게 확인.
-- ~~**단어 추가 UI 위치**~~ — 컨텍스트 메뉴 방식으로 확정 (2026-04-18).
+- **Room 스키마 마이그레이션 전략**: `isTranslationEdited` 컬럼 추가 시 `ALTER TABLE` 마이그레이션 스크립트를 작성할 것인가, v0.1 MVP 특성상 destructive rebuild를 허용할 것인가? 현재 PRD는 destructive rebuild를 허용하는 방향으로 기술했으나, QA 단계에서 기존 카드 데이터 유실 여부를 명시적으로 확인해야 한다.
+- ~~**수정 인디케이터 위치**~~ — 공개(revealed) 상태에서만 표시로 확정 (2026-04-19, wordcard-translation-edit iter 2). 헤더 복잡도 최소화 및 학습 흐름 자연스러움이 이유. AC-20 반영 완료.
+- ~~**카드 추가 UI 구현 방식**~~ — 아이콘 버튼 + TextField BottomSheet 방식(방안 A)으로 확정 (2026-04-18, wordcard-add-ux). `SelectionContainer` / `WordCardTextToolbar` / 클립보드 프로브 전면 제거.
+- ~~**단어 추가 UI 위치**~~ — 원문 탭 헤더(또는 본문 상단 우측) 아이콘 버튼으로 확정 (2026-04-18, wordcard-add-ux).
 - ~~**번역 재사용**~~ — ML Kit 단어 단위 직접 호출로 확정 (2026-04-18).
 - ~~**카드 중복**~~ — 별도 카드로 추가(병합 없음)로 확정 (2026-04-18).

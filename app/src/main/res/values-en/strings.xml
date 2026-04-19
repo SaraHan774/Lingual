@@ -1,0 +1,21 @@
+<resources>
+    <string name="app_name">Lingual</string>
+
+    <!-- FlashCard: Edit translation (AC-17~AC-23) -->
+    <string name="flashcard_edit_translation_cd">Edit translation</string>
+    <string name="flashcard_edit_translation_title">Edit %1$s translation</string>
+    <string name="flashcard_edit_translation_hint">Enter translation manually</string>
+    <string name="flashcard_edit_translation_warning">Original ML Kit translation cannot be restored after editing</string>
+    <string name="flashcard_edit_translation_save">Save</string>
+    <string name="flashcard_edit_translation_cancel">Cancel</string>
+    <string name="flashcard_edit_translation_success">Translation updated.</string>
+    <string name="flashcard_edit_translation_failure">Failed to update translation. Please try again.</string>
+    <string name="flashcard_translation_missing">No translation — tap to enter manually</string>
+    <string name="flashcard_translation_edited_badge">Edited</string>
+
+    <!-- Language names — for BottomSheet title formatting -->
+    <string name="language_name_ko">Korean</string>
+    <string name="language_name_en">English</string>
+    <string name="language_name_ja">Japanese</string>
+    <string name="language_name_zh">Chinese</string>
+</resources>
