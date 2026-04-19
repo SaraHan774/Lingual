@@ -83,6 +83,7 @@ feedback:
    - **맥락 블록**: "당신은 `/ship` 사이클 컨텍스트에서 호출되었습니다. cycle file: `.claude/cycles/<slug>.md` (iteration <N>). 원본 요청: <원본>."
    - **누적 피드백**: YAML 프론트매터의 `feedback.<stage>` 필드 전체(여러 번 back-prop 된 경우 모든 항목이 시간순으로 쌓여 있다. 가장 최근 항목이 맨 아래).
    - **출력 요구**: "응답 맨 마지막에 VERDICT 블록을 반드시 포함하세요. 스키마는 에이전트 정의의 'VERDICT 블록' 섹션을 따릅니다."
+   - **QA iter-aware 스코프** (stage=`qa` 이고 `iter.qa ≥ 2` 인 경우에만): 이전 `feedback.qa` 블록에서 FAIL 로 명시된 AC 번호를 추출해 `재검증 대상 AC: [<목록>]` 로 프롬프트에 포함. 나머지(이전 PASS) 는 스모크 세트만 돌리도록 지시. 이번 iter 가 `max_iter` 와 같으면 `full_rerun=true` 플래그도 추가 — qa-tester 는 이 경우 전 AC 를 full 검증. FAIL AC 추출이 모호하면(이전 feedback 파싱 실패) 안전한 기본값으로 `full_rerun=true` 를 전달.
 5. **VERDICT 파싱**: 에이전트 응답의 마지막 ```verdict ... ``` 블록을 찾아 YAML 로 파싱한다. 블록이 없거나 스키마가 깨지면 **그 에이전트를 한 번만** "VERDICT 블록을 형식에 맞게 다시 출력해 주세요" 라고 재호출한다(재호출은 iteration 카운트에 포함하지 않는다). 두 번 실패하면 `BLOCKED_HUMAN` 으로 종료.
 5-a. **빌드 게이트 (code 스테이지 PASS 직후에만)**: coder 가 `PASS` 를 방출하면, 다음 스테이지(review)로 넘기기 **전에** 오케스트레이터가 직접 `./gradlew :app:assembleDebug` 를 실행한다.
    - **성공**: 정상적으로 step 6 로 진행.

@@ -184,6 +184,18 @@ QA 결과 처리:
 - **FAIL** 이면 실패 재현 절차를 반영해 수정 → 빌드 → 다시 QA 의뢰. 자체 판단으로 "flaky" 처리 금지.
 - **PASS** 면 보고서 최종화.
 
+### QA 마커 (선택, debug 빌드 전용)
+
+qa-tester 가 실기 검증 시 스크린샷 대신 logcat 마커로 상태 전이를 확인할 수 있게, 필요한 경우에만 **최소한**의 `Log.d("QA", "...")` 를 삽입한다.
+
+- **태그 고정**: `"QA"` (qa-tester 는 `adb logcat -T 1 -s QA:D` 로 tail).
+- **형식**: `Log.d("QA", "<event>:<context>")`. 예: `"SAVED:entryId=42"`, `"TRANSLATED:ko->en"`, `"TAB_CHANGED:flashcard"`, `"ERROR_SHOWN:translate_failed"`, `"DIALOG:confirm_cancel_open"`.
+- **삽입 대상만**: DB 저장 성공, 번역 상태 전이(PENDING/SUCCESS/ERROR), 탭/라우트 이동, 다이얼로그·바텀시트 open/dismiss, 에러 스낵바 표시. **로직 내 모든 분기에 남발 금지** — 핵심 상태 전이 한 줄씩만.
+- **debug 전용 보장**: production 에서 제거되도록 둘 중 하나:
+  1. `if (BuildConfig.DEBUG) Log.d("QA", ...)` 로 가드, 또는
+  2. release 빌드의 R8/ProGuard 규칙 `-assumenosideeffects class android.util.Log { public static int d(...); }` 가 이미 구성돼 있는지 확인(없으면 추가하지 말고 옵션 1 사용).
+- **마커가 없던 기능에 굳이 주입하지 않는다.** QA 가 스크린샷만으로 충분하면 추가 불필요. 기존 FAIL 이 "상태 전이 관찰 불가" 로 반복될 때만 투입한다.
+
 ## 자주 쓰는 명령 레시피
 
 ```bash

@@ -41,6 +41,7 @@
 - **TTS**: `@Singleton TtsService` 가 `StateFlow<TtsState>` (`Idle`/`Playing`/`Error`) 노출. `AppLanguage.toLocale()` 로 Locale 지정. 기기에 TTS 데이터 미설치 Locale 은 `Error("Language not supported: ...")`.
 - **Room**: `exportSchema = false`. 마이그레이션 미설정 → version bump 는 destructive rebuild 를 전제로 한다.
 - **Compose one-shot 이벤트**: `MutableSharedFlow<Unit>(replay=0, extraBufferCapacity=1)` + `LaunchedEffect(Unit) { collect { ... } }` 패턴 사용. `StateFlow<Int>` + increment 방식은 Composition 재생성(화면 회전 등) 시 마지막 값으로 LaunchedEffect 가 재실행되어 replay 버그 발생.
+- **QA 마커**: qa-tester 가 스크린샷 대신 logcat 으로 상태 전이를 확인할 수 있도록, 핵심 상태 전이에 `Log.d("QA", "<event>:<context>")` 를 **debug 빌드 전용** 으로 삽입 가능(`BuildConfig.DEBUG` 가드). 태그는 `"QA"` 고정. 상세 규칙은 `.claude/agents/coder.md` 의 "QA 마커" 섹션.
 
 ## Commands
 

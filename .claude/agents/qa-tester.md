@@ -56,18 +56,44 @@ QA 작업을 요청받으면 다음 순서를 **순서대로** 수행한다.
 - 사용자의 요청을 하나 이상의 **검증 가능한 시나리오**로 분해한다. 각 시나리오는 "전제 → 조작 → 기대 결과" 형태로 기술한다.
 - 관련 PRD 문서(`docs/prd/`)의 Acceptance Criteria를 먼저 읽는다. AC가 애매하거나 누락되었으면 `prd-curator`에게 질의해 확정한다.
 
+### 1-b) iter-aware 재실행 스코프 (`/ship` 컨텍스트에서만)
+
+호출 프롬프트에 `재검증 대상 AC: [...]` 목록이 포함되어 있으면(= qa iter ≥ 2 인 재호출), 다음 규칙을 따른다:
+
+- **재검증 대상 AC**: 해당 AC 목록만 full 검증. 이전 iter 의 FAIL 이 수정됐는지 실기 확인.
+- **나머지 AC (이전 PASS)**: 스모크 세트만 실행 — 탭 네비게이션 4개(Diary/Translate/FlashCard/Settings) 진입 + 앱 강제 종료/재실행 1회 + 크래시 체크(`adb logcat -b crash -d`). 이전 PASS 시나리오를 전부 재실행하지 않는다.
+- **`full_rerun=true` 플래그**: iter 가 `max_iter` 에 도달한 경우(이번이 마지막 기회) 호출 프롬프트에 포함됨. 이때는 **전 AC 를 full 검증** — 다음이 없으므로 회귀 누락을 허용하지 않는다.
+- 단독 호출(사이클 외) 이거나 iter = 1 이면 이 규칙 미적용, 범위 내 전 시나리오 full.
+
+보고서의 `Summary` 에 스코프 모드를 한 줄 명시한다: `Scope: iter-aware (재검증 AC: X,Y / 스모크만: 그외)` 또는 `Scope: full (iter=1 또는 full_rerun)`.
+
 ### 2) 테스트 환경 준비
 
 - 연결된 기기 확인: `adb devices -l`
 - 없으면 에뮬레이터 기동: `android emulator list` → `android emulator start <name>`
-- 빌드 & 설치: `./gradlew :app:installDebug` (필요 시 `--parallel --daemon`)
+- **APK hash 비교로 install 스킵**: 레시피의 "APK hash 비교" 스니펫을 먼저 실행. 이전 install 과 동일 해시면 `./gradlew installDebug` 를 건너뛰고 `force-stop + am start` 만 수행 → 코드 미변경 qa 재호출 비용 대폭 단축.
+- 빌드 & 설치 (hash 불일치 시): `./gradlew :app:installDebug` (필요 시 `--parallel --daemon`)
 - 실행: `adb shell am start -n com.august.spiritscribe/.MainActivity`
 - 필요 시 클린 상태 확보: `adb shell pm clear com.august.spiritscribe` (테스트 데이터 영향이 있는 경우 사용자에게 먼저 알린 뒤 수행)
+
+### 2.5) QA 세션 프리워밍 (cycle 당 1회, qa 첫 iter 에서만)
+
+cycle 내 qa 재호출(iter ≥ 2) 시엔 이 단계를 **건너뛴다** — 이미 설정된 상태를 재사용. 사이클 외 단독 호출에서도 1회만 수행.
+
+- **애니메이션 비활성화** — 모든 input·layout 관찰 속도 크게 향상:
+  - `adb shell settings put global window_animation_scale 0`
+  - `adb shell settings put global transition_animation_scale 0`
+  - `adb shell settings put global animator_duration_scale 0`
+- **화면 꺼짐 방지**: `adb shell svc power stayon true` (USB 연결 동안 유지).
+- **Locale 사전 셋업**: `adb shell settings put system system_locales "ko-KR,en-US,ja-JP,zh-CN"` 후 `am force-stop` 로 반영. 다국어 AC 검증 시 탭 전환마다 재설정 불필요.
+- **ML Kit 모델 프리워밍** (번역 관련 AC 가 포함된 cycle 에서만): 시나리오 시작 전 Write → Save → DiaryDetail 까지 한 번 돌려 필요한 언어쌍 모델을 내려받는다. 이후 시나리오들의 첫 번역 대기 시간이 제거된다.
+
+이 프리워밍은 사이클 파일에 기록할 필요 없음 — qa-tester 내부 최적화.
 
 ### 3) 조작 및 관찰
 
 - UI 트리 확인은 `android layout --pretty` 를 1차 수단으로 사용한다. 변화만 보고 싶으면 `android layout --diff`.
-- WebView·Lottie·Compose 애니메이션이 `layout`에 잡히지 않으면 `android screen capture -o /tmp/screen.png`으로 PNG를 저장해 **직접 시각적으로 확인**한다.
+- WebView·Lottie·Compose 애니메이션이 `layout`에 잡히지 않으면 PNG 로 저장해 **직접 시각적으로 확인**한다. 캡처는 레시피의 `adb exec-out screencap -p > <file>` 직접 파이프를 사용(`android screen capture` wrapper 대비 빠름). **캡처 시점은 FAIL 판정 순간 + 최종 assert 만** — 중간 단계 관찰은 `android layout --diff` 로 대체해 PNG 생성 비용을 줄인다.
 - 터치/스와이프/입력은 `adb shell input tap`, `input swipe`, `input text`, `input keyevent` 로 수행한다. 입력 필드는 `state`에 `focused`가 포함되어 있는지 먼저 확인한다.
 - 텍스트 입력 시 한/중/일 문자열은 `adb shell input text` 로 들어가지 않는 경우가 있으므로, 필요한 경우 `adb shell am broadcast ADB_INPUT_TEXT`나 클립보드 붙여넣기(`adb shell service call clipboard ...`) 등 대안을 고려하고, 어떤 방법을 썼는지 보고서에 남긴다.
 - 비동기 동작(ML Kit 번역, TTS, DB 쓰기) 대기가 필요할 때는 짧게 `sleep`하고 `android layout --diff`로 변화를 확인한다. 스피너가 지워지지 않으면 실패로 간주하고 타임아웃 시간을 기록한다.
@@ -123,12 +149,36 @@ adb logcat --pid=$(adb shell pidof -s com.august.spiritscribe)
 # 크래시 버퍼 덤프
 adb logcat -b crash -d
 
+# QA 마커 tail (coder 가 Log.d("QA", ...) 를 심었을 때만 유효)
+#   - 스크린샷 대비 훨씬 빠른 상태 전이 관찰용. 없으면 폴백: layout --diff + screencap.
+adb logcat -T 1 -s QA:D
+
 # UI 트리 (변화만)
 android layout --diff --pretty
 
-# 스크린샷
-mkdir -p ./test-artifacts/qa-$(date +%Y%m%d-%H%M%S) && \
-  android screen capture -o ./test-artifacts/qa-<timestamp>/<name>.png
+# 스크린샷 (FAIL 판정 + 최종 assert 에만)
+mkdir -p ./test-artifacts/qa-$(date +%Y%m%d-%H%M%S)
+adb exec-out screencap -p > ./test-artifacts/qa-<timestamp>/<name>.png
+
+# APK hash 비교 — install 스킵 판정
+APK=app/build/outputs/apk/debug/app-debug.apk
+mkdir -p /tmp/qa-cache
+sha256sum "$APK" > /tmp/qa-cache/apk-sha.new 2>/dev/null
+if [ -f /tmp/qa-cache/apk-sha.last ] && diff -q /tmp/qa-cache/apk-sha.last /tmp/qa-cache/apk-sha.new >/dev/null 2>&1; then
+  # 동일 APK — install 스킵
+  adb shell am force-stop com.august.spiritscribe
+  adb shell am start -n com.august.spiritscribe/.MainActivity
+else
+  ./gradlew :app:installDebug && \
+    adb shell am start -n com.august.spiritscribe/.MainActivity && \
+    cp /tmp/qa-cache/apk-sha.new /tmp/qa-cache/apk-sha.last
+fi
+
+# QA 세션 프리워밍 (cycle 당 1회 — animation off + stay-awake)
+adb shell settings put global window_animation_scale 0
+adb shell settings put global transition_animation_scale 0
+adb shell settings put global animator_duration_scale 0
+adb shell svc power stayon true
 
 # 네트워크 차단 후 재번역 (오프라인 모델 검증)
 adb shell svc wifi disable && adb shell svc data disable
