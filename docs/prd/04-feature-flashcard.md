@@ -5,6 +5,8 @@
 > **변경 이력**
 > - 2026-04-18 최초 작성 (shipped: 목록/숙련도/즐겨찾기)
 > - 2026-04-18 `/ship wordcard-feature` iter 1 — 카드 추가 UI · 카드 삭제 UI를 `in-progress`로 승격. Open Questions 두 건 AC로 확정.
+> - 2026-04-18 `/ship flashcard-ui-ux` iter 1 — FlashCard 화면 UI/UX 개선 7건 AC-9~AC-15로 추가. UX Flow B 갱신.
+> - 2026-04-18 `/ship flashcard-ui-ux` iter 2 — [CRITICAL] nextReviewAt을 v0.1에서 활성화(masteryLevel별 고정 간격). 데이터 모델 "미사용" 표시 제거. AC-10 조건 구체화, AC-11 reviewCount 갱신 명시, AC-13 오늘 복습 예정 수치 추가, AC-15 색상 팔레트 정의, AC-16(신규) 숙련도 선택 시 nextReviewAt 자동 설정 추가. UX Flow B에 카드 자동 접힘 없음 결정 사항 추가.
 
 ---
 
@@ -52,19 +54,40 @@
 
 > **결정된 사항 (2026-04-18):** 텍스트 선택 후 컨텍스트 메뉴 방식 채택. 별도 "+ 단어" 버튼은 사용하지 않는다. 컨텍스트 메뉴는 Compose `SelectionContainer` + `ContextMenuArea` 패턴 또는 `BasicTextField`의 `onTextLayout` 콜백으로 구현한다.
 
-### B. 카드 목록 — FlashCardScreen (현재 shipped)
+### B. 카드 목록 — FlashCardScreen
 
 ```
 [FlashCard Tab]
-  └─ 비어 있음: "아직 단어 카드가 없습니다. 일기에서 단어를 추가해 보세요."
+  ├─ 통계 배너: "카드 N개 · 즐겨찾기 M개"
+  ├─ 필터 칩 행: [전체] [즐겨찾기] [복습 예정]
+  │     └─ 선택된 칩: filled 스타일, 나머지: outlined 스타일
+  │     └─ "복습 예정" = nextReviewAt ≤ now 조건
+  ├─ 비어 있음: 아이콘 + 안내 텍스트 조합 (Empty State UI)
+  │     └─ 필터에 따라 안내 문구 분기
+  │           ├─ 전체 비어 있음: "아직 단어 카드가 없습니다. 일기에서 단어를 추가해 보세요."
+  │           ├─ 즐겨찾기 비어 있음: "즐겨찾기한 카드가 없습니다."
+  │           └─ 복습 예정 비어 있음: "복습 예정인 카드가 없습니다."
   └─ 카드 있음: LazyColumn
         └─ 카드 아이템
-              ├─ 왼쪽: 단어 + 출처 언어·숙련도·복습 횟수 레이블
-              ├─ 오른쪽: 하트(즐겨찾기) + 휴지통(삭제) 아이콘
+              ├─ 헤더 행
+              │     ├─ 단어 텍스트
+              │     ├─ 숙련도 시각 표시 (도트 3개 또는 진행 바, masteryLevel 0–3)
+              │     └─ 출처 언어 AssistChip 배지 (컬러 소형 Chip)
+              ├─ 서브헤더: 복습 횟수 레이블
+              ├─ 오른쪽: 하트(즐겨찾기) 아이콘
               └─ 탭 → revealed 토글
                     ├─ 미공개: "탭하여 뜻 보기"
-                    └─ 공개: 3개 언어 번역 + Lv 0–3 Chip
+                    └─ 공개:
+                          ├─ 3개 언어 번역 (각 번역 옆 언어 AssistChip 배지)
+                          ├─ 숙련도 Chip 행: "모름" / "어려움" / "보통" / "완벽"
+                          │     └─ 현재 선택 레벨: filled 스타일, 나머지: outlined 스타일
+                          └─ 휴지통(삭제) 아이콘 — 공개 상태에서만 표시
 ```
+
+> **결정된 사항 (2026-04-18):** 삭제 버튼은 카드가 공개(revealed) 상태일 때만 표시한다. 미공개 상태에서의 실수 탭 방지 목적.
+> **결정된 사항 (2026-04-18):** 숙련도 레이블은 `Lv 0`=모름, `Lv 1`=어려움, `Lv 2`=보통, `Lv 3`=완벽 로 표시한다.
+> **결정된 사항 (2026-04-18):** 필터 상태는 `FlashCardViewModel` 내 `filterState: StateFlow<FlashCardFilter>` 로 관리한다. `FlashCardFilter`는 `All | Favorites | DueForReview` enum. DB 쿼리 변경 없이 ViewModel에서 Flow를 필터링하거나, 각 필터에 맞는 repository 메서드를 호출한다.
+> **결정된 사항 (2026-04-18):** 숙련도 Chip 선택 후 카드는 자동으로 접히지 않는다. 사용자가 동일 카드에서 연속으로 숙련도를 수정하거나 번역 내용을 계속 볼 수 있도록 공개(revealed) 상태를 유지한다.
 
 ### C. 카드 삭제
 
@@ -91,7 +114,7 @@
 | `translations` | Map<AppLanguage, String> (JSON) | 최대 4개 언어 번역 |
 | `exampleSentences` | Map<AppLanguage, String>? (JSON) | 선택적 예문 (Phase 2까지 미사용) |
 | `masteryLevel` | Int (0–3) | 숙련도 |
-| `nextReviewAt` | Long? | 다음 복습 시각 (현재 미사용, Phase 2) |
+| `nextReviewAt` | Long? | 다음 복습 시각. masteryLevel 선택 시 고정 간격으로 자동 설정: Lv 0 → +1일, Lv 1 → +3일, Lv 2 → +7일, Lv 3 → +30일. null이면 아직 숙련도가 한 번도 기록되지 않은 상태 |
 | `reviewCount` | Int | 복습 횟수 |
 | `isFavorite` | Boolean | 즐겨찾기 |
 
@@ -118,7 +141,7 @@ JSON 직렬화 규칙: `MapSerializer(String.serializer(), String.serializer())`
 | 日本語 | 単語カードに追加 |
 | 中文 | 添加到单词卡 |
 
-빈 상태 메시지:
+빈 상태 메시지 (전체 필터):
 
 | 언어 | 표시 문자 |
 |------|-----------|
@@ -126,6 +149,41 @@ JSON 직렬화 규칙: `MapSerializer(String.serializer(), String.serializer())`
 | English | No word cards yet. Select a word in your diary to get started. |
 | 日本語 | 単語カードがありません。日記から単語を選んで追加してみましょう。 |
 | 中文 | 还没有单词卡。请在日记中选择单词来添加。 |
+
+빈 상태 메시지 (즐겨찾기 필터):
+
+| 언어 | 표시 문자 |
+|------|-----------|
+| 한국어 | 즐겨찾기한 카드가 없습니다. |
+| English | No favorite cards yet. |
+| 日本語 | お気に入りのカードがありません。 |
+| 中文 | 还没有收藏的卡片。 |
+
+빈 상태 메시지 (복습 예정 필터):
+
+| 언어 | 표시 문자 |
+|------|-----------|
+| 한국어 | 복습 예정인 카드가 없습니다. |
+| English | No cards due for review. |
+| 日本語 | 復習予定のカードはありません。 |
+| 中文 | 没有待复习的卡片。 |
+
+숙련도 레이블:
+
+| 레벨 | 한국어 | English | 日本語 | 中文 |
+|------|--------|---------|--------|------|
+| 0 | 모름 | Don't know | わからない | 不会 |
+| 1 | 어려움 | Hard | 難しい | 困难 |
+| 2 | 보통 | Okay | まあまあ | 还行 |
+| 3 | 완벽 | Perfect | 完璧 | 完美 |
+
+필터 칩 레이블:
+
+| 구분 | 한국어 | English | 日本語 | 中文 |
+|------|--------|---------|--------|------|
+| 전체 | 전체 | All | すべて | 全部 |
+| 즐겨찾기 | 즐겨찾기 | Favorites | お気に入り | 收藏 |
+| 복습 예정 | 복습 예정 | Due | 復習予定 | 待复习 |
 
 ---
 
@@ -145,16 +203,35 @@ JSON 직렬화 규칙: `MapSerializer(String.serializer(), String.serializer())`
 - [ ] **AC-2 (카드 생성 시트)**: "단어 카드 추가" 액션 실행 시 선택된 단어와 번역 진행 상태를 보여주는 BottomSheet(또는 AlertDialog)가 표시된다. 번역이 완료되면 [저장] 버튼이 활성화된다.
 - [ ] **AC-3 (번역 자동 채움)**: 카드 저장 시 `TranslationEngine.translate(word, sourceLanguage, targetLanguage)`를 나머지 3개 언어에 대해 병렬 호출하여 `WordCard.translations`에 채운다. 첫 모델 다운로드 이후 동일 언어쌍은 네트워크 없이 3초 이내 응답.
 - [ ] **AC-4 (저장 완료 피드백)**: 카드 저장 완료 후 스낵바 "단어 카드가 저장되었습니다."가 표시된다. 동일 단어 중복 저장 시에도 별도 카드로 저장되며 동일 스낵바가 표시된다.
-- [ ] **AC-5 (카드 삭제)**: `FlashCardScreen` 카드 아이템에 삭제 아이콘(휴지통)이 있다. 탭 시 확인 다이얼로그가 표시되고, 확인하면 `repository.deleteWordCard(id)`가 호출되어 목록에서 즉시 제거된다.
+- [ ] **AC-5 (카드 삭제)**: `FlashCardScreen` 카드 아이템의 삭제 아이콘(휴지통)은 **카드가 공개(revealed) 상태일 때만** 표시된다. 탭 시 확인 다이얼로그가 표시되고, 확인하면 `repository.deleteWordCard(id)`가 호출되어 목록에서 즉시 제거된다.
 - [ ] **AC-6 (삭제 취소)**: 삭제 확인 다이얼로그에서 [취소]를 누르면 카드가 유지된다.
 - [ ] **AC-7 (sourceEntryId 연결)**: 저장된 카드의 `sourceEntryId`에 해당 일기의 ID가 정확히 기록된다. 이후 일기가 삭제되어도 카드의 `sourceEntryId`가 NULL이 되고 카드 자체는 유지된다 (FK SET NULL 정책).
 - [ ] **AC-8 (언어 코드)**: 카드 저장 시 `sourceLanguage`, `translations` 키는 반드시 `AppLanguage` enum 경유. 하드코딩된 문자열 금지.
+- [ ] **AC-9 (필터 칩)**: `FlashCardScreen` 상단에 "전체 / 즐겨찾기 / 복습 예정" 3개 필터 칩이 가로 행으로 배치된다. 선택된 칩은 filled 스타일, 나머지는 outlined 스타일이다. `FlashCardViewModel`은 `filterState: StateFlow<FlashCardFilter>` (`All | Favorites | DueForReview`)를 노출하며, 칩 선택 시 해당 필터로 즉시 목록이 갱신된다.
+- [ ] **AC-10 (필터 — 복습 예정)**: "복습 예정" 필터는 `nextReviewAt != null && nextReviewAt ≤ currentTimeMillis()` 조건을 만족하는 카드만 표시한다. `nextReviewAt`이 null인 카드(숙련도를 한 번도 선택하지 않은 신규 카드)는 "복습 예정" 필터에서 제외된다.
+- [ ] **AC-11 (숙련도 레이블)**: 카드 공개 상태의 숙련도 선택 Chip 레이블이 `Lv 0`=모름, `Lv 1`=어려움, `Lv 2`=보통, `Lv 3`=완벽 으로 표시된다. 현재 선택된 레벨의 Chip은 filled 스타일, 나머지는 outlined 스타일이다. 숙련도 Chip 선택 즉시 카드 서브헤더의 `reviewCount` UI가 갱신된다(+1 반영 즉시 표시, Flow 구독 경유).
+- [ ] **AC-12 (숙련도 시각화)**: 카드 헤더에 `masteryLevel` 0–3을 시각적으로 표현하는 요소(도트 3개 또는 진행 바)가 표시된다. 레벨 0은 모든 요소 비활성, 레벨 3은 모든 요소 활성화된 상태로 한눈에 숙련도를 파악할 수 있다.
+- [ ] **AC-13 (통계 배너)**: `FlashCardScreen` 상단(필터 칩 위)에 "카드 N개 · 즐겨찾기 M개 · 오늘 복습 K개" 형태의 통계 배너가 표시된다. N은 전체 카드 수, M은 즐겨찾기 카드 수, K는 `nextReviewAt != null && nextReviewAt ≤ currentTimeMillis()` 조건의 카드 수이며, 카드 추가/삭제/즐겨찾기 토글/숙련도 선택 시 즉시 갱신된다. K가 0이면 "오늘 복습 0개" 도 표시한다(조건 달성 시 사용자 인지 가능).
+- [ ] **AC-14 (Empty State)**: 카드 목록이 비어 있을 때 텍스트만 표시하지 않고, 관련 아이콘 + 안내 텍스트 조합의 Empty State UI를 표시한다. 필터별 안내 문구가 다르다: 전체 비어 있음 → "아직 단어 카드가 없습니다. 일기에서 단어를 추가해 보세요.", 즐겨찾기 비어 있음 → "즐겨찾기한 카드가 없습니다.", 복습 예정 비어 있음 → "복습 예정인 카드가 없습니다."
+- [ ] **AC-15 (언어 배지)**: 카드 헤더에 출처 언어(`sourceLanguage`)를 소형 컬러 AssistChip으로 표시한다. 공개 상태의 번역 목록에서도 각 번역 항목 옆에 해당 언어의 AssistChip 배지가 표시된다. 언어별 칩 색상은 아래 팔레트를 기준으로 `AppLanguage` 값에 따라 일관되게 적용한다.
+  - KO: 파랑 계열 (예: `Color(0xFF1565C0)` 배경, 흰 텍스트)
+  - EN: 녹색 계열 (예: `Color(0xFF2E7D32)` 배경, 흰 텍스트)
+  - JA: 빨강 계열 (예: `Color(0xFFC62828)` 배경, 흰 텍스트)
+  - ZH: 주황 계열 (예: `Color(0xFFE65100)` 배경, 흰 텍스트)
+  - 정확한 색상 값은 구현 시 Material Design 토큰과 조화롭게 조정 가능하나, 계열 매핑(KO=파랑/EN=녹색/JA=빨강/ZH=주황)은 변경 불가.
+
+- [ ] **AC-16 (숙련도 선택 시 nextReviewAt 자동 설정)**: 숙련도 Chip 선택 시 `nextReviewAt`이 아래 고정 간격으로 자동 계산되어 `WordCard`에 저장된다.
+  - Lv 0 (모름): 현재 시각 + 1일
+  - Lv 1 (어려움): 현재 시각 + 3일
+  - Lv 2 (보통): 현재 시각 + 7일
+  - Lv 3 (완벽): 현재 시각 + 30일
+  - 계산 기준: `System.currentTimeMillis() + intervalDays * 24 * 60 * 60 * 1000L`
 
 ### planned (Phase 2)
 
 - [ ] 일기 저장 시 단어 자동 추출 및 사용자 승인 플로우.
 - [ ] `FlashCardStudy` 라우트 활성화 — 세션 모드, 즐겨찾기/낮은 숙련도 우선.
-- [ ] `nextReviewAt` 활용 — SM-2 lite 간격 반복.
+- [ ] `nextReviewAt` 간격 고도화 — SM-2 lite 알고리즘으로 개인화된 간격 반복. v0.1의 고정 간격(AC-16)을 대체.
 - [ ] 카드 TTS 재생 (각 언어별 단어 발음).
 - [ ] 예문 자동 채움 (`exampleSentences` 필드 활성화).
 - [ ] 카드 편집 (단어/번역 직접 수정).
@@ -167,7 +244,7 @@ JSON 직렬화 규칙: `MapSerializer(String.serializer(), String.serializer())`
 
 1. **자동 단어 추출** — ML Kit Entity Extraction 또는 형태소 분석기로 후보 단어를 뽑아 사용자 승인 후 저장.
 2. **학습 세션 모드** — `FlashCardStudy` 라우트 활성화. 세션 종료 후 통계.
-3. **간격 반복** — `nextReviewAt`을 실제로 활용. SM-2 lite.
+3. **간격 반복 고도화** — v0.1 고정 간격(AC-16)을 SM-2 lite 알고리즘으로 대체. 개인화된 복습 일정.
 4. **예문 자동 생성** — 원문 일기 문장에서 해당 단어가 포함된 문장을 예문으로 자동 채움.
 
 ---
