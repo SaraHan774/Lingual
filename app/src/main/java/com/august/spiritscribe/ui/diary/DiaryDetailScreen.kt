@@ -19,6 +19,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
@@ -72,6 +73,7 @@ import com.august.spiritscribe.utils.TtsState
 @Composable
 fun DiaryDetailScreen(
     onNavigateBack: () -> Unit,
+    onEditClick: (String) -> Unit,
     viewModel: DiaryDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -96,6 +98,14 @@ fun DiaryDetailScreen(
                     }
                 },
                 actions = {
+                    // AC-E01: 편집 아이콘. 엔트리 로드 전에는 비활성(id 가 없으므로 라우팅 불가).
+                    val currentEntryId = state.entry?.id
+                    IconButton(
+                        onClick = { currentEntryId?.let(onEditClick) },
+                        enabled = currentEntryId != null,
+                    ) {
+                        Icon(Icons.Filled.Edit, contentDescription = "편집")
+                    }
                     IconButton(onClick = { showDeleteDialog = true }) {
                         Icon(Icons.Filled.Delete, contentDescription = "삭제")
                     }

@@ -29,7 +29,7 @@ import com.august.spiritscribe.ui.translate.TranslateBrowseScreen
 import kotlinx.serialization.Serializable
 
 @Serializable
-data object WriteDiary
+data class WriteDiary(val entryId: String? = null)
 
 @Serializable
 data class DiaryDetail(val id: String)
@@ -80,7 +80,7 @@ fun AppNavigation(
     ) {
         composable(Screen.Diary.route) {
             DiaryListScreen(
-                onWriteClick = { navController.navigate(WriteDiary) },
+                onWriteClick = { navController.navigate(WriteDiary()) },
                 onEntryClick = { id -> navController.navigate(DiaryDetail(id)) },
             )
         }
@@ -96,7 +96,10 @@ fun AppNavigation(
             WriteDiaryScreen(onNavigateBack = { navController.popBackStack() })
         }
         composable<DiaryDetail> {
-            DiaryDetailScreen(onNavigateBack = { navController.popBackStack() })
+            DiaryDetailScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onEditClick = { id -> navController.navigate(WriteDiary(entryId = id)) },
+            )
         }
     }
 }

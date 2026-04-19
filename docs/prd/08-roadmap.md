@@ -32,7 +32,7 @@
    ML Kit Entity Extraction 또는 간단한 빈도/난이도 휴리스틱.
 7. **학습 세션 모드 (`FlashCardStudy` 라우트 활성화)**
    즐겨찾기/숙련도 낮음 카드 우선, 세션 종료 후 통계.
-8. **일기 편집 기능 + 편집 시 번역 무효화 정책**
+8. **일기 편집 기능 + 편집 시 번역 무효화 정책** ← [Resolved 2026-04-19] `02-feature-diary.md` AC-E01~E10 참조
 9. **TTS 속도·피치 사용자 설정** (→ `06-feature-settings.md`)
 10. **검색/필터 (일기 본문 검색)**
 
@@ -60,7 +60,7 @@
 | 제품 전략 | 언어 확장 기준은? | `01-overview.md` |
 | 제품 전략 | 일기 길이 상한? | `01-overview.md` |
 | 제품 전략 | 로컬 DB 내보내기/가져오기 제공? | `01-overview.md` |
-| Diary | 편집 시 번역 무효화 정책 | `02-feature-diary.md` |
+| ~~Diary~~ | ~~편집 시 번역 무효화 정책~~ **[Resolved 2026-04-19]** 정책 A+C 채택. AC-E01~E10 확정. | `02-feature-diary.md` |
 | Diary | Mood/Tags UI 노출 or 스키마 제거 | `02-feature-diary.md` |
 | Diary | 검색/필터 도입 시점 | `02-feature-diary.md` |
 | Translation | Stale PENDING 회수 전략 | `03-feature-translation.md` |
@@ -90,3 +90,4 @@
 | 2026-04-18 | FlashCard 카드 추가 UI: 텍스트 선택 후 컨텍스트 메뉴 방식 채택 | 별도 버튼보다 자연스러운 텍스트 선택 인터랙션 |
 | 2026-04-18 | 단어 카드 번역: ML Kit 단어 단위 직접 호출 (일기 번역 재사용 안 함) | 단어 카드는 독립 생애주기 필요, 문장 번역에서 단어 추출 불가 |
 | 2026-04-18 | 중복 단어: 별도 카드로 추가 (병합 없음) | v0.1은 단순성 우선, Phase 2에서 재검토 |
+| 2026-04-19 | 일기 편집 번역 무효화 정책: A+C 채택 (전 언어 PENDING 리셋 → 즉시 재번역). 제목만 변경 시 무효화 없음. | diff 기반 부분 번역은 ML Kit 오프라인 특성상 이점 없고 복잡도만 증가 |
