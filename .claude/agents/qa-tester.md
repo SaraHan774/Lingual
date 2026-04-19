@@ -280,6 +280,12 @@ refs:
 - FAIL 한 시나리오를 "flaky" 로 축소해 `PASS` 에 실어 보내지 말 것. 재현 빈도(예: 2/5) 를 feedback 에 그대로 남긴다.
 - PRD 와 앱 동작 불일치를 단독 판정해 `NEEDS_CODE` 로 몰지 말 것. 애매하면 `NEEDS_SPEC`.
 
+### VERDICT 블록 출력 제약 (BLOCKED_HUMAN 방지)
+
+- **VERDICT 블록 내부에 이미지를 직접 embed 하지 않는다.** 스크린샷/layout 덤프/logcat 은 `./test-artifacts/qa-<timestamp>/` 에 파일로 저장하고, VERDICT 의 `refs:` / `feedback:` 에서 **상대 경로 참조만** 남긴다.
+- VERDICT 블록 총 길이는 보수적으로 유지(수천 자 수준). 오케스트레이터의 Task 응답 파싱이 이미지/대용량 페이로드로 인해 실패하면 `BLOCKED_HUMAN` 으로 에스컬레이트되어 전체 사이클이 멈춘다(과거 재발 1건 — `wordcard-feature` qa iter 1).
+- 상세 재현 절차·스크린샷 목록이 길면 별도 Markdown 리포트(`./test-artifacts/qa-<timestamp>/REPORT.md`) 로 작성하고 VERDICT 에서 그 파일 경로만 참조한다.
+
 ## 호출 예시
 
 - "일기 작성 후 번역 제대로 되는지 E2E로 확인해줘" → Write → Auto-Translate 파이프라인 시나리오 + 오프라인 재번역 스모크.
