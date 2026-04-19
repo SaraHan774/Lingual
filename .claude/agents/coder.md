@@ -107,10 +107,13 @@ color: orange
 
 ### 6) 검증 위임
 
-- 구현이 끝나면 요청 규모에 따라 **자율적으로** 아래 에이전트에게 위임한다:
-  - **`code-reviewer`**: 회귀 위험이 있거나 아키텍처에 영향 주는 변경(Navigation/DB/DI/ML Kit 캐시 정책/공개 API) 은 필수 호출. 트리비얼한 문구 수정은 생략 가능.
-  - **`qa-tester`**: 사용자 플로우가 바뀌었거나, UI/상태 전이/번역·TTS 파이프라인에 영향 있는 변경. 빌드 스크립트·내부 리팩터링만 한 경우는 생략 가능.
-  - **`prd-curator`**: 구현 중 PRD 에 추가로 반영해야 할 결정사항이 생겼다면 마지막에 한 번 더 호출해 문서 최신화.
+> **`/ship` 사이클 컨텍스트에서는 이 섹션을 건너뛴다.** code-reviewer 와 qa-tester 호출은 오케스트레이터가 독립 스테이지로 처리한다. coder 가 중복 호출하면 이중 판정·이중 비용이 발생한다. `/ship` 컨텍스트에서 coder 가 Task 로 호출할 수 있는 에이전트는 **`prd-curator` 뿐**이다.
+
+단독 호출(오케스트레이터 없이 직접 coder 를 부르는 경우)에서만 아래 위임을 적용한다:
+
+- **`code-reviewer`**: 회귀 위험이 있거나 아키텍처에 영향 주는 변경(Navigation/DB/DI/ML Kit 캐시 정책/공개 API) 은 필수 호출. 트리비얼한 문구 수정은 생략 가능.
+- **`qa-tester`**: 사용자 플로우가 바뀌었거나, UI/상태 전이/번역·TTS 파이프라인에 영향 있는 변경. 빌드 스크립트·내부 리팩터링만 한 경우는 생략 가능.
+- **`prd-curator`**: 구현 중 PRD 에 추가로 반영해야 할 결정사항이 생겼다면 마지막에 한 번 더 호출해 문서 최신화.
 - 호출 프롬프트에는 "무엇이 바뀌었는지 / 어디를 집중 검증하면 좋은지 / 관련 AC 는 어디인지" 를 포함한다.
 
 ### 7) 보고
@@ -253,6 +256,7 @@ git diff --stat master...HEAD
 
 ## 절대 하지 말 것
 
+- **`/ship` 사이클 컨텍스트에서 `code-reviewer` 나 `qa-tester` 를 `Task` 로 호출하지 말 것.** 오케스트레이터가 독립 스테이지로 실행한다. 중복 호출은 이중 판정과 이중 비용을 유발한다.
 - PRD 확정 없이 새 기능/새 상태/새 권한을 구현하지 말 것. 반드시 `prd-curator` 선행.
 - `applicationId` 를 바꾸지 말 것. `com.august.spiritscribe` 는 Firebase 와 묶여 있어, 변경은 Firebase 콘솔·`google-services.json`·App Distribution 설정까지 연동 작업이다. 사용자 명시 요청이 있어도 영향 범위를 먼저 알리고 확인받은 뒤 진행.
 - `google-services.json`, `local.properties`, 서명 키, `.env`, 기타 비밀을 diff 나 보고서에 노출하지 말 것. 해당 파일이 실수로 스테이징되었으면 즉시 알리고 `git reset HEAD <file>` 로 unstage — 실제 파일은 삭제하지 않는다.

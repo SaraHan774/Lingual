@@ -38,44 +38,26 @@ description: "Lingual 기능의 전체 전달 사이클(PRD → Code → Review 
 
 1. **slug 생성**: 요청 텍스트에서 짧은 영문 slug 를 만든다(예: "일기에 태그 기능 추가" → `diary-tags`). 한국어·특수문자는 제거, 3~5 단어, kebab-case. 이미 `.claude/cycles/<slug>.md` 가 존재하면 뒤에 `-2`, `-3` 붙인다.
 2. **cycle file 작성**: `.claude/cycles/<slug>.md` 에 아래 템플릿을 쓴다.
+   YAML 프론트매터(`---` 블록)가 기계 판독 상태, 그 아래 마크다운이 사람 판독 이력이다.
 
 ```markdown
-# Cycle: <slug>
+---
+slug: <slug>
+request: "<원본 요청>"
+started: "<YYYY-MM-DD HH:MM>"
+max_iter: 3
+stage: prd
+iter: {prd: 0, prd-review: 0, code: 0, review: 0, qa: 0}
+last_verdict: ~
+feedback:
+  prd: ~
+  prd-review: ~
+  code: ~
+  review: ~
+  qa: ~
+---
 
-- **Request**: <원본 요청>
-- **Started**: <YYYY-MM-DD HH:MM>
-- **Max iterations per stage**: 3
-
-## State
-- **Current stage**: prd
-- **Iterations**:
-  - prd: 0
-  - prd-review: 0
-  - code: 0
-  - review: 0
-  - qa: 0
-- **Last verdict**: (none)
-
-## Accumulated Feedback
-<!-- 각 스테이지 에이전트를 호출할 때 실어 보낼 최신 피드백. 해당 스테이지로 다시 돌아올 때마다 덮어쓴다. -->
-
-### For prd
-(none)
-
-### For prd-review
-(none)
-
-### For code
-(none)
-
-### For review
-(none)
-
-### For qa
-(none)
-
-## History
-<!-- 호출 결과 append-only. -->
+<!-- History: append-only -->
 ```
 
 3. **사용자에게 한 줄 통지**: "사이클 시작: `.claude/cycles/<slug>.md`" — 사용자가 진행 상황을 볼 수 있는 파일 위치를 알려준다.
@@ -83,9 +65,9 @@ description: "Lingual 기능의 전체 전달 사이클(PRD → Code → Review 
 **경로 B — 재개 (`/ship --resume <slug>`)**
 
 1. `.claude/cycles/<slug>.md` 를 `Read` 한다. 없으면 오류 + `ls .claude/cycles/` 결과 반환 후 종료.
-2. 파일의 `State.Current stage` 가 `done` 이면 "이미 완료된 사이클입니다" 로 종료(재실행이 필요하면 신규 `/ship` 호출 권장).
-3. `State.Current stage`, `Iterations`, `Accumulated Feedback` 를 SSoT 로 그대로 승계 — **대화 컨텍스트의 기억으로 덮어쓰지 않는다.** (이전 세션의 기억이 있더라도, 파일이 우선.)
-4. 사용자에게 한 줄 통지: "사이클 재개: `<slug>` — stage=`<current>`, iterations=prd:<n>/code:<n>/review:<n>/qa:<n>".
+2. YAML 프론트매터의 `stage` 가 `done` 이면 "이미 완료된 사이클입니다" 로 종료(재실행이 필요하면 신규 `/ship` 호출 권장).
+3. `stage`, `iter`, `feedback`, `last_verdict` 를 SSoT 로 그대로 승계 — **대화 컨텍스트의 기억으로 덮어쓰지 않는다.** (이전 세션의 기억이 있더라도, 파일이 우선.)
+4. 사용자에게 한 줄 통지: "사이클 재개: `<slug>` — stage=`<current>`, iter=prd:<n>/code:<n>/review:<n>/qa:<n>".
 5. 아래 루프로 진입.
 
 ### 1) 스테이지 실행 루프
@@ -94,19 +76,29 @@ description: "Lingual 기능의 전체 전달 사이클(PRD → Code → Review 
 
 > **Compaction 안전성 원칙**: 대화 컨텍스트의 기억(직전 verdict, 직전 stage 등)은 compaction 으로 언제든 요약·유실될 수 있다. 따라서 **매 iteration 은 사이클 파일을 처음 보는 것처럼 시작한다.** "내가 방금 뭘 했는지" 를 기억에 의존해 판단하지 않는다.
 
-1. **사이클 파일 재로드 (compaction 안전)**: iteration 시작 시 맨 먼저 `.claude/cycles/<slug>.md` 를 `Read` 로 **다시 읽는다.** `State.Current stage`, `Iterations`, `Accumulated Feedback` 을 이 파일 내용으로 신뢰한다. 대화 컨텍스트와 어긋나면 **파일을 따른다** — 파일이 SSoT 이다.
-2. **가드 체크**: 재로드된 `Iterations.<current_stage>` 가 `MAX_ITERATIONS_PER_STAGE` 를 초과하면 즉시 루프 종료 + 사용자에게 에스컬레이션 메시지(아래 "종료" 참조).
-3. **카운트 증가**: `Iterations.<current_stage>` 를 +1 하고 **즉시** 사이클 파일에 `Edit` 로 반영.
+1. **사이클 파일 재로드 (compaction 안전)**: iteration 시작 시 맨 먼저 `.claude/cycles/<slug>.md` 를 `Read` 로 **다시 읽는다.** 파일 상단 `---` 블록(YAML 프론트매터)에서 `stage`, `iter`, `feedback`, `last_verdict` 를 읽는다. 대화 컨텍스트와 어긋나면 **파일을 따른다** — 파일이 SSoT 이다.
+2. **가드 체크**: 재로드된 `iter.<current_stage>` 가 `max_iter` 를 초과하면 즉시 루프 종료 + 사용자에게 에스컬레이션 메시지(아래 "종료" 참조).
+3. **카운트 증가**: `iter.<current_stage>` 를 +1 하고 **즉시** 사이클 파일의 YAML `iter:` 필드를 `Edit` 로 반영.
 4. **에이전트 호출**: `Task` 툴로 해당 스테이지의 에이전트를 호출한다. 프롬프트에 반드시 다음을 포함:
    - **맥락 블록**: "당신은 `/ship` 사이클 컨텍스트에서 호출되었습니다. cycle file: `.claude/cycles/<slug>.md` (iteration <N>). 원본 요청: <원본>."
-   - **누적 피드백**: 사이클 파일의 `Accumulated Feedback > For <stage>` 섹션 내용(이전 스테이지가 이 stage 로 back-prop 하며 남긴 것).
+   - **누적 피드백**: YAML 프론트매터의 `feedback.<stage>` 필드 전체(여러 번 back-prop 된 경우 모든 항목이 시간순으로 쌓여 있다. 가장 최근 항목이 맨 아래).
    - **출력 요구**: "응답 맨 마지막에 VERDICT 블록을 반드시 포함하세요. 스키마는 에이전트 정의의 'VERDICT 블록' 섹션을 따릅니다."
 5. **VERDICT 파싱**: 에이전트 응답의 마지막 ```verdict ... ``` 블록을 찾아 YAML 로 파싱한다. 블록이 없거나 스키마가 깨지면 **그 에이전트를 한 번만** "VERDICT 블록을 형식에 맞게 다시 출력해 주세요" 라고 재호출한다(재호출은 iteration 카운트에 포함하지 않는다). 두 번 실패하면 `BLOCKED_HUMAN` 으로 종료.
-6. **즉시 영속화 (compaction 안전)**: VERDICT 파싱 **직후, 다음 Task 호출 전에 반드시 먼저** 사이클 파일을 단 한 번에 아래 항목을 모두 포함하도록 `Edit` 로 갱신한다:
-   - `## History` 맨 아래에 `### <ts> — <stage> (iter <N>)` 섹션 추가 (status, next_stage, feedback 요약, refs).
-   - `State.Current stage` 를 `next_stage` 값으로 변경 (BLOCKED_HUMAN 이면 `human` 으로).
-   - `State.Last verdict` 를 `<status> (stage=<stage>, iter=<N>)` 로 업데이트.
-   - `NEEDS_<STAGE>` 인 경우 `Accumulated Feedback > For <stage>` 섹션을 verdict 의 `feedback` 으로 **덮어쓴다** (이전 피드백은 History 에만 남는다).
+5-a. **빌드 게이트 (code 스테이지 PASS 직후에만)**: coder 가 `PASS` 를 방출하면, 다음 스테이지(review)로 넘기기 **전에** 오케스트레이터가 직접 `./gradlew :app:assembleDebug` 를 실행한다.
+   - **성공**: 정상적으로 step 6 로 진행.
+   - **실패**: 빌드 출력을 feedback 으로 삼아 YAML `feedback.code` 에 append 하고, `stage` 를 `code` 로 유지한 채 `iter.code` 를 +1. 이 실패는 coder iteration 카운트에 포함된다(false PASS 방출에 대한 페널티). 이후 루프 맨 위로 돌아가 coder 재호출.
+6. **즉시 영속화 (compaction 안전)**: VERDICT 파싱 **직후, 다음 Task 호출 전에 반드시 먼저** 사이클 파일을 `Edit` 로 갱신한다. 수정 대상은 모두 YAML 프론트매터(`---` 블록) 안의 필드다:
+   - `stage: <old>` → `stage: <next_stage>` 로 교체 (BLOCKED_HUMAN 이면 `stage: human`).
+   - `iter:` 의 해당 스테이지 카운트를 +1 된 값으로 교체. 예: `{prd: 1, prd-review: 0, ...}`.
+   - `last_verdict: ~` (또는 이전 값) → `last_verdict: "<status> (stage=<stage>, iter=<N>)"` 로 교체.
+   - `NEEDS_<STAGE>` 인 경우 `feedback.<target-stage>:` 필드에 새 항목을 **추가(append)** 한다. 기존 값이 `~` 이면 block scalar 로 교체하고, 이미 block scalar 이면 맨 아래에 빈 줄 + 새 항목을 붙인다:
+     ```yaml
+       <target-stage>: |
+         [iter <N> — from <current-stage>, <YYYY-MM-DD>]
+         <verdict.feedback 내용>
+     ```
+   - `<!-- History -->` 마크다운 블록 맨 아래에 한 줄 이력을 추가(append):
+     `### <YYYY-MM-DD> — <stage> (iter <N>): <status> → <next_stage>. <feedback 1줄 요약>`
    - 이 파일 쓰기가 실패하면 다음 스테이지로 **절대 진행하지 않는다** — 실패 보고 후 BLOCKED_HUMAN.
 7. **루프 제어**: `status: BLOCKED_HUMAN` 이면 종료. 아니면 루프 맨 위(Step 1, 재로드)로 돌아간다 — in-memory 변수를 이월하지 않고 파일에서 다시 읽어 진행한다.
 
