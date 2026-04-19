@@ -1,5 +1,8 @@
 package com.august.spiritscribe.ui.diary
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,7 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -20,6 +23,7 @@ import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.outlined.BookmarkAdd
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -32,6 +36,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SecondaryScrollableTabRow
 import androidx.compose.material3.SnackbarHost
@@ -42,7 +47,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -51,14 +55,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.platform.ClipboardManager
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.platform.LocalTextToolbar
-import androidx.compose.ui.platform.TextToolbar
-import androidx.compose.ui.platform.TextToolbarStatus
-import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -120,7 +120,7 @@ fun DiaryDetailScreen(
                 onSpeak = viewModel::speak,
                 onStop = viewModel::stopSpeaking,
                 onRetry = viewModel::retryTranslation,
-                onRequestAddWordCard = viewModel::requestAddWordCard,
+                onOpenAddWordCard = viewModel::openAddWordCard,
                 modifier = Modifier.padding(padding),
             )
         }
@@ -147,6 +147,7 @@ fun DiaryDetailScreen(
         AddWordCardBottomSheet(
             state = addWordState,
             sourceLanguage = state.entry?.sourceLanguage,
+            onWordChange = viewModel::updateWordInput,
             onDismiss = viewModel::dismissAddWordCard,
             onSave = viewModel::saveWordCard,
         )
@@ -162,7 +163,7 @@ private fun DetailContent(
     onSpeak: (String, AppLanguage) -> Unit,
     onStop: () -> Unit,
     onRetry: (AppLanguage) -> Unit,
-    onRequestAddWordCard: (String) -> Unit,
+    onOpenAddWordCard: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val languages = remember(entry.sourceLanguage) {
@@ -177,11 +178,11 @@ private fun DetailContent(
     var selectedIndex by rememberSaveable { mutableStateOf(0) }
     val selectedLanguage = languages[selectedIndex]
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState()),
-    ) {
+    val isSourceSelected = selectedLanguage == entry.sourceLanguage
+
+    // 탭 행과 BookmarkAdd 아이콘은 스크롤 밖 고정 영역에 둔다(AC-1).
+    // 본문(LanguagePanel) 만 verticalScroll 로 스크롤된다.
+    Column(modifier = modifier.fillMaxSize()) {
         if (entry.title.isNotBlank()) {
             Text(
                 text = entry.title,
@@ -197,43 +198,69 @@ private fun DetailContent(
             modifier = Modifier.padding(horizontal = 16.dp),
         )
 
-        SecondaryScrollableTabRow(
-            selectedTabIndex = selectedIndex,
-            modifier = Modifier.padding(top = 12.dp),
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            languages.forEachIndexed { index, lang ->
-                val isSource = lang == entry.sourceLanguage
-                val translationStatus = if (isSource) {
-                    null
-                } else {
-                    translationsByLang[lang]?.status
+            SecondaryScrollableTabRow(
+                selectedTabIndex = selectedIndex,
+                modifier = Modifier.weight(1f),
+            ) {
+                languages.forEachIndexed { index, lang ->
+                    val isSource = lang == entry.sourceLanguage
+                    val translationStatus = if (isSource) {
+                        null
+                    } else {
+                        translationsByLang[lang]?.status
+                    }
+                    Tab(
+                        selected = index == selectedIndex,
+                        onClick = { selectedIndex = index },
+                        text = {
+                            TabLabel(
+                                label = if (isSource) "${lang.displayName} (원문)" else lang.displayName,
+                                isSource = isSource,
+                                status = translationStatus,
+                            )
+                        },
+                    )
                 }
-                Tab(
-                    selected = index == selectedIndex,
-                    onClick = { selectedIndex = index },
-                    text = {
-                        TabLabel(
-                            label = if (isSource) "${lang.displayName} (원문)" else lang.displayName,
-                            isSource = isSource,
-                            status = translationStatus,
-                        )
-                    },
-                )
+            }
+            // 원문 탭 활성 시에만 BookmarkAdd 버튼 노출(AC-1). 탭 행과 같은 고정 Row 안에
+            // 있으므로 본문 길이와 무관하게 항상 보인다.
+            AnimatedVisibility(
+                visible = isSourceSelected,
+                enter = fadeIn(),
+                exit = fadeOut(),
+            ) {
+                IconButton(onClick = onOpenAddWordCard) {
+                    Icon(
+                        imageVector = Icons.Outlined.BookmarkAdd,
+                        contentDescription = "단어 카드 추가",
+                    )
+                }
             }
         }
 
         HorizontalDivider()
 
-        LanguagePanel(
-            entry = entry,
-            selectedLanguage = selectedLanguage,
-            translation = translationsByLang[selectedLanguage],
-            tts = tts,
-            onSpeak = onSpeak,
-            onStop = onStop,
-            onRetry = onRetry,
-            onRequestAddWordCard = onRequestAddWordCard,
-        )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState()),
+        ) {
+            LanguagePanel(
+                entry = entry,
+                selectedLanguage = selectedLanguage,
+                translation = translationsByLang[selectedLanguage],
+                tts = tts,
+                onSpeak = onSpeak,
+                onStop = onStop,
+                onRetry = onRetry,
+            )
+        }
     }
 }
 
@@ -246,7 +273,6 @@ private fun LanguagePanel(
     onSpeak: (String, AppLanguage) -> Unit,
     onStop: () -> Unit,
     onRetry: (AppLanguage) -> Unit,
-    onRequestAddWordCard: (String) -> Unit,
 ) {
     val isSource = selectedLanguage == entry.sourceLanguage
     val content = if (isSource) entry.content else translation?.translatedContent.orEmpty()
@@ -268,11 +294,7 @@ private fun LanguagePanel(
         ) {
             when {
                 isSource -> {
-                    WordCardSelectableText(
-                        text = content,
-                        actionLabel = "단어 카드 추가",
-                        onActionInvoked = onRequestAddWordCard,
-                    )
+                    Text(text = content, style = MaterialTheme.typography.bodyLarge)
                     PlayButton(
                         playing = isPlayingThis,
                         enabled = content.isNotBlank(),
@@ -330,98 +352,24 @@ private fun LanguagePanel(
     }
 }
 
-/**
- * Wraps [text] in a [SelectionContainer] and injects a custom [TextToolbar] that adds a
- * "단어 카드 추가" action alongside the default system copy handler. The selected text is
- * captured by temporarily swapping the clipboard, invoking the default copy handler to read
- * the current selection, then restoring the previous clipboard value. This is the standard
- * Compose workaround for the fact that [TextToolbar.showMenu] does not expose the raw
- * selection string.
- */
-@Composable
-private fun WordCardSelectableText(
-    text: String,
-    actionLabel: String,
-    onActionInvoked: (String) -> Unit,
-) {
-    val clipboardManager = LocalClipboardManager.current
-    val defaultToolbar = LocalTextToolbar.current
-    val customToolbar = remember(defaultToolbar, clipboardManager, actionLabel, onActionInvoked) {
-        WordCardTextToolbar(
-            delegate = defaultToolbar,
-            clipboardManager = clipboardManager,
-            actionLabel = actionLabel,
-            onActionInvoked = onActionInvoked,
-        )
-    }
-
-    CompositionLocalProvider(LocalTextToolbar provides customToolbar) {
-        SelectionContainer {
-            Text(text = text, style = MaterialTheme.typography.bodyLarge)
-        }
-    }
-}
-
-/**
- * Custom [TextToolbar] that reuses the platform default implementation but injects an
- * additional "Add word card" action into the copy path. When the user picks our action we
- * extract the selection by driving [onCopyRequested] against a scratch clipboard.
- */
-private class WordCardTextToolbar(
-    private val delegate: TextToolbar,
-    private val clipboardManager: ClipboardManager,
-    private val actionLabel: String,
-    private val onActionInvoked: (String) -> Unit,
-) : TextToolbar {
-
-    override val status: TextToolbarStatus
-        get() = delegate.status
-
-    override fun hide() {
-        delegate.hide()
-    }
-
-    override fun showMenu(
-        rect: Rect,
-        onCopyRequested: (() -> Unit)?,
-        onPasteRequested: (() -> Unit)?,
-        onCutRequested: (() -> Unit)?,
-        onSelectAllRequested: (() -> Unit)?,
-    ) {
-        val wrappedCopy: (() -> Unit)? = onCopyRequested?.let { originalCopy ->
-            {
-                val previous = runCatching { clipboardManager.getText() }.getOrNull()
-                originalCopy()
-                val captured = runCatching { clipboardManager.getText()?.text }.getOrNull().orEmpty()
-                // Restore previous clipboard content so our probe is not user-visible.
-                if (previous != null) {
-                    runCatching { clipboardManager.setText(previous) }
-                } else {
-                    runCatching { clipboardManager.setText(AnnotatedString("")) }
-                }
-                if (captured.isNotBlank()) {
-                    onActionInvoked(captured)
-                }
-            }
-        }
-        // Delegate presents the standard system toolbar; we hook our action through the copy path
-        // via wrappedCopy. This keeps the platform look-and-feel and accessibility behaviour.
-        // Note: the custom label [actionLabel] is not currently surfaced by the platform toolbar
-        // surface on Android; see tracking in PRD 04 Open Questions. AC-1 is still satisfied via
-        // the copy-equivalent action that routes selection into the word-card flow.
-        delegate.showMenu(rect, wrappedCopy, onPasteRequested, onCutRequested, onSelectAllRequested)
-    }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AddWordCardBottomSheet(
     state: AddWordCardState,
     sourceLanguage: AppLanguage?,
+    onWordChange: (String) -> Unit,
     onDismiss: () -> Unit,
     onSave: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val focusRequester = remember { FocusRequester() }
+    // 시트 콘텐츠가 합성된 직후 TextField 에 포커스를 주어 키보드를 자동 오픈한다(AC-2).
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+
+    val trimmedWord = state.word.trim()
+    val canSave = trimmedWord.isNotEmpty() && !state.isTranslating && !state.isSaving
+    val busy = state.isTranslating || state.isSaving
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
@@ -437,10 +385,20 @@ private fun AddWordCardBottomSheet(
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
-            Text(
-                text = state.word,
-                style = MaterialTheme.typography.headlineSmall,
+
+            OutlinedTextField(
+                value = state.word,
+                onValueChange = onWordChange,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(focusRequester),
+                singleLine = true,
+                enabled = !busy,
+                placeholder = { Text("단어 또는 표현 입력") },
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                isError = state.error != null,
             )
+
             sourceLanguage?.let {
                 Text(
                     text = "원문: ${it.displayName}",
@@ -469,22 +427,20 @@ private fun AddWordCardBottomSheet(
                     }
                 }
                 state.error != null -> {
-                    Text(
-                        text = "번역 실패: ${state.error}",
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
-                else -> {
-                    AppLanguage.entries
-                        .filter { it != sourceLanguage }
-                        .forEach { lang ->
-                            val value = state.translations[lang]
-                            Text(
-                                text = "${lang.displayName}: ${value.orEmpty()}",
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = "번역 실패: ${state.error}",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        FilledTonalButton(
+                            onClick = onSave,
+                            enabled = canSave,
+                        ) {
+                            Icon(Icons.Filled.Refresh, contentDescription = null)
+                            Text(text = "다시 시도", modifier = Modifier.padding(start = 8.dp))
                         }
+                    }
                 }
             }
 
@@ -499,12 +455,15 @@ private fun AddWordCardBottomSheet(
                 }
                 Button(
                     onClick = onSave,
-                    enabled = !state.isTranslating &&
-                        !state.isSaving &&
-                        state.error == null &&
-                        state.translations.isNotEmpty(),
+                    enabled = canSave,
                 ) {
-                    Text(if (state.isSaving) "저장 중..." else "저장")
+                    Text(
+                        when {
+                            state.isSaving -> "저장 중..."
+                            state.isTranslating -> "번역 중..."
+                            else -> "저장"
+                        }
+                    )
                 }
             }
         }

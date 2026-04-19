@@ -116,29 +116,42 @@ class DiaryDetailViewModel @Inject constructor(
         }
     }
 
-    fun requestAddWordCard(rawWord: String) {
-        val word = rawWord.trim()
+    fun openAddWordCard() {
+        if (uiState.value.entry == null) return
+        _addWordCardState.value = AddWordCardState(visible = true)
+    }
+
+    fun updateWordInput(word: String) {
+        _addWordCardState.update {
+            if (!it.visible) it
+            // 입력이 바뀌면 이전 번역 결과와 에러를 초기화한다. 번역은 저장 시점에만 수행한다.
+            else it.copy(word = word, translations = emptyMap(), error = null)
+        }
+    }
+
+    fun dismissAddWordCard() {
+        // 시트를 닫으면 진행 중인 번역/저장 상태를 포함해 전체 리셋한다.
+        // viewModelScope 의 번역 코루틴은 state.visible=false 후속 반영보다는 다음 저장 시도에서 새로 시작된다.
+        _addWordCardState.value = AddWordCardState()
+    }
+
+    fun saveWordCard() {
+        val snapshot = _addWordCardState.value
+        val entry = uiState.value.entry ?: return
+        if (!snapshot.visible || snapshot.isSaving || snapshot.isTranslating) return
+
+        val word = snapshot.word.trim()
         if (word.isBlank()) return
         // 구두점/기호만 있고 문자(Letter)가 전혀 없으면 단어 카드로 취급하지 않는다.
         if (word.none { it.isLetter() }) return
-        val entry = uiState.value.entry ?: return
 
-        _addWordCardState.value = AddWordCardState(
-            visible = true,
-            word = word,
-            isTranslating = true,
-            translations = emptyMap(),
-            error = null,
-        )
+        _addWordCardState.update {
+            it.copy(word = word, isTranslating = true, error = null, translations = emptyMap())
+        }
 
         viewModelScope.launch {
-            runCatching { translateWordToAllTargets(word, entry.sourceLanguage) }
-                .onSuccess { translations ->
-                    _addWordCardState.update {
-                        it.copy(isTranslating = false, translations = translations, error = null)
-                    }
-                }
-                .onFailure { e ->
+            val translations = runCatching { translateWordToAllTargets(word, entry.sourceLanguage) }
+                .getOrElse { e ->
                     _addWordCardState.update {
                         it.copy(
                             isTranslating = false,
@@ -146,29 +159,20 @@ class DiaryDetailViewModel @Inject constructor(
                             error = e.message ?: "번역 실패",
                         )
                     }
+                    return@launch
                 }
-        }
-    }
 
-    fun dismissAddWordCard() {
-        _addWordCardState.value = AddWordCardState()
-    }
+            _addWordCardState.update {
+                it.copy(isTranslating = false, translations = translations, isSaving = true, error = null)
+            }
 
-    fun saveWordCard() {
-        val snapshot = _addWordCardState.value
-        val entry = uiState.value.entry ?: return
-        if (!snapshot.visible || snapshot.isTranslating || snapshot.isSaving) return
-        if (snapshot.translations.isEmpty()) return
-
-        viewModelScope.launch {
-            _addWordCardState.update { it.copy(isSaving = true) }
             val now = System.currentTimeMillis()
             val card = WordCard(
                 id = UUID.randomUUID().toString(),
                 sourceEntryId = entry.id,
-                word = snapshot.word,
+                word = word,
                 sourceLanguage = entry.sourceLanguage,
-                translations = snapshot.translations,
+                translations = translations,
                 exampleSentences = emptyMap(),
                 masteryLevel = 0,
                 nextReviewAt = null,
