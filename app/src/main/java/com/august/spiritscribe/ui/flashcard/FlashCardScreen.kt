@@ -69,14 +69,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.august.spiritscribe.R
 import com.august.spiritscribe.domain.model.AppLanguage
 import com.august.spiritscribe.domain.model.WordCard
-private val masteryLabels = listOf("모름", "어려움", "보통", "완벽")
+import com.august.spiritscribe.ui.theme.languageBadgeColor
 
-private fun languageBadgeColor(lang: AppLanguage): Color = when (lang) {
-    AppLanguage.KOREAN -> Color(0xFF1565C0)
-    AppLanguage.ENGLISH -> Color(0xFF2E7D32)
-    AppLanguage.JAPANESE -> Color(0xFFC62828)
-    AppLanguage.CHINESE -> Color(0xFFE65100)
-}
+@Composable
+private fun masteryLabels(): List<String> = listOf(
+    stringResource(R.string.flashcard_mastery_0),
+    stringResource(R.string.flashcard_mastery_1),
+    stringResource(R.string.flashcard_mastery_2),
+    stringResource(R.string.flashcard_mastery_3),
+)
 
 @Composable
 private fun AppLanguage.localizedName(): String = stringResource(
@@ -134,7 +135,7 @@ fun FlashCardScreen(
     }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("단어장") }) },
+        topBar = { TopAppBar(title = { Text(stringResource(R.string.flashcard_title)) }) },
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
         Column(
@@ -183,16 +184,16 @@ fun FlashCardScreen(
     pendingDeleteCard?.let { target ->
         AlertDialog(
             onDismissRequest = { pendingDeleteCard = null },
-            title = { Text("이 단어 카드를 삭제할까요?") },
-            text = { Text("단어 \"${target.word}\" 카드를 삭제합니다.") },
+            title = { Text(stringResource(R.string.flashcard_delete_dialog_title)) },
+            text = { Text(stringResource(R.string.flashcard_delete_dialog_body, target.word)) },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.deleteCard(target.id)
                     pendingDeleteCard = null
-                }) { Text("삭제") }
+                }) { Text(stringResource(R.string.flashcard_delete_confirm)) }
             },
             dismissButton = {
-                TextButton(onClick = { pendingDeleteCard = null }) { Text("취소") }
+                TextButton(onClick = { pendingDeleteCard = null }) { Text(stringResource(R.string.common_cancel)) }
             },
         )
     }
@@ -223,7 +224,7 @@ private fun StatsBanner(stats: FlashCardStats) {
         color = MaterialTheme.colorScheme.surfaceVariant,
     ) {
         Text(
-            text = "카드 ${stats.total}개 · 즐겨찾기 ${stats.favorites}개 · 오늘 복습 ${stats.dueToday}개",
+            text = stringResource(R.string.flashcard_stats_banner, stats.total, stats.favorites, stats.dueToday),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = FontWeight.Medium,
@@ -250,21 +251,21 @@ private fun FilterChipRow(
             FilterChip(
                 selected = selected == FlashCardFilter.All,
                 onClick = { onSelect(FlashCardFilter.All) },
-                label = { Text("전체") },
+                label = { Text(stringResource(R.string.common_all)) },
             )
         }
         item {
             FilterChip(
                 selected = selected == FlashCardFilter.Favorites,
                 onClick = { onSelect(FlashCardFilter.Favorites) },
-                label = { Text("즐겨찾기") },
+                label = { Text(stringResource(R.string.flashcard_filter_favorites)) },
             )
         }
         item {
             FilterChip(
                 selected = selected == FlashCardFilter.DueForReview,
                 onClick = { onSelect(FlashCardFilter.DueForReview) },
-                label = { Text("복습 예정") },
+                label = { Text(stringResource(R.string.flashcard_filter_due_for_review)) },
             )
         }
         item {
@@ -287,15 +288,15 @@ private fun EmptyState(
     when (filter) {
         FlashCardFilter.All -> {
             icon = Icons.AutoMirrored.Outlined.MenuBook
-            message = "아직 단어 카드가 없습니다.\n일기에서 단어를 추가해 보세요."
+            message = stringResource(R.string.flashcard_empty_all)
         }
         FlashCardFilter.Favorites -> {
             icon = Icons.Outlined.FavoriteBorder
-            message = "즐겨찾기한 카드가 없습니다."
+            message = stringResource(R.string.flashcard_empty_favorites)
         }
         FlashCardFilter.DueForReview -> {
             icon = Icons.Outlined.CheckCircle
-            message = "복습 예정인 카드가 없습니다."
+            message = stringResource(R.string.flashcard_empty_due_for_review)
         }
         // AC-14: "최근 추가" Empty State 는 4개 언어 리소스에 "다음 행동 제시" 문구 포함.
         FlashCardFilter.RecentlyAdded -> {
@@ -429,7 +430,7 @@ private fun FlashCardItem(
                     ) {
                         MasteryDots(card.masteryLevel)
                         Text(
-                            text = "복습 ${card.reviewCount}회",
+                            text = stringResource(R.string.flashcard_review_count, card.reviewCount),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.outline,
                         )
@@ -439,7 +440,7 @@ private fun FlashCardItem(
                     Icon(
                         imageVector = if (card.isFavorite) Icons.Filled.Favorite
                         else Icons.Filled.FavoriteBorder,
-                        contentDescription = "즐겨찾기",
+                        contentDescription = stringResource(R.string.flashcard_favorite_cd),
                         tint = if (card.isFavorite) MaterialTheme.colorScheme.primary
                         else MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -470,7 +471,7 @@ private fun FlashCardItem(
                     modifier = Modifier.padding(top = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    masteryLabels.forEachIndexed { level, label ->
+                    masteryLabels().forEachIndexed { level, label ->
                         FilterChip(
                             selected = card.masteryLevel == level,
                             onClick = { onRate(level) },
@@ -485,14 +486,14 @@ private fun FlashCardItem(
                     IconButton(onClick = onRequestDelete) {
                         Icon(
                             imageVector = Icons.Outlined.Delete,
-                            contentDescription = "삭제",
+                            contentDescription = stringResource(R.string.flashcard_delete_cd),
                             tint = MaterialTheme.colorScheme.error,
                         )
                     }
                 }
             } else {
                 Text(
-                    text = "탭하여 뜻 보기",
+                    text = stringResource(R.string.flashcard_tap_to_reveal),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

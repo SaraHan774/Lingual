@@ -14,13 +14,15 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.august.spiritscribe.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen() {
     Scaffold(
-        topBar = { TopAppBar(title = { Text("설정") }) },
+        topBar = { TopAppBar(title = { Text(stringResource(R.string.settings_title)) }) },
     ) { padding ->
         Column(
             modifier = Modifier
@@ -30,31 +32,31 @@ fun SettingsScreen() {
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            SectionTitle("번역 엔진")
+            SectionTitle(stringResource(R.string.settings_section_translation_engine))
             Text(
-                text = "현재 엔진: Google ML Kit (온디바이스, 오프라인)",
+                text = stringResource(R.string.settings_translation_engine_desc),
                 style = MaterialTheme.typography.bodyMedium,
             )
             Text(
-                text = "번역 모델은 최초 사용 시 자동으로 다운로드됩니다 (언어당 약 30MB).",
+                text = stringResource(R.string.settings_translation_model_desc),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
             HorizontalDivider()
 
-            SectionTitle("TTS")
+            SectionTitle(stringResource(R.string.settings_section_tts))
             Text(
-                text = "Android 시스템의 TextToSpeech를 사용합니다. 지원 언어는 기기 설정에 따릅니다.",
+                text = stringResource(R.string.settings_tts_desc),
                 style = MaterialTheme.typography.bodyMedium,
             )
 
             HorizontalDivider()
 
-            SectionTitle("앱 정보")
-            Text(text = "Lingual · v0.1 MVP", style = MaterialTheme.typography.bodyMedium)
+            SectionTitle(stringResource(R.string.settings_section_app_info))
+            Text(text = stringResource(R.string.settings_app_version), style = MaterialTheme.typography.bodyMedium)
             Text(
-                text = "한국어, English, 日本語, 中文 간 일기 번역 및 학습 앱",
+                text = stringResource(R.string.settings_app_desc),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

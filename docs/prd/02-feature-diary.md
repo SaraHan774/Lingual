@@ -142,6 +142,30 @@ ViewModel(`DiaryListViewModel`)에서 `ERROR > PENDING > AllDone` 우선순위�
 - [x] SUCCESS 탭은 인디케이터 없이 언어 이름만 표시한다(정상 상태는 노이즈 없이).
 - [x] PENDING 인디케이터는 번역 완료 시 자동으로 사라진다(Flow 실시간 반영).
 
+### DiaryDetailScreen 탭 언어 색상 인디케이터 (in-progress — DD-01)
+
+`SecondaryScrollableTabRow`의 각 탭 앞(탭 레이블 왼쪽)에 해당 `AppLanguage`를 나타내는 색상 점(8dp 원)을 추가한다. 색상 팔레트는 `FlashCardScreen`의 언어 배지 색상(`LanguageColors.kt`)과 동일하게 공유한다.
+
+| AppLanguage | 색상 계열 | 예시 값 |
+|---|---|---|
+| KO | 파랑 | `Color(0xFF1565C0)` |
+| EN | 녹색 | `Color(0xFF2E7D32)` |
+| JA | 빨강 | `Color(0xFFC62828)` |
+| ZH | 주황 | `Color(0xFFE65100)` |
+
+**결정된 사항 (2026-04-19, tab-color-indicator):**
+- 색상 점 크기: 8dp 원(`Canvas` 또는 `Box` with `clip(CircleShape)`).
+- 원문 탭 포함 모든 탭에 색상 점을 표시한다 (언어 구분이 목적이므로 원문/번역 탭 구별 없이 적용).
+- 색상 정의는 `ui/theme/LanguageColors.kt`에 `fun languageBadgeColor(lang: AppLanguage): Color` 형태로 위치하며, `FlashCardScreen`과 `DiaryDetailScreen`이 공통으로 임포트한다.
+- 색상 점은 기존 PENDING/ERROR 상태 인디케이터와 병존한다(순서: 색상 점 → 언어 이름 → 상태 인디케이터).
+
+**Acceptance Criteria (DD-01):**
+- [ ] **AC-DD-01**: `SecondaryScrollableTabRow`의 각 탭에서, 탭 레이블 텍스트 왼쪽에 8dp 원 색상 점이 표시된다. 색상은 `AppLanguage` 값(KO=파랑/EN=녹색/JA=빨강/ZH=주황)에 따라 고정된다.
+- [ ] **AC-DD-02**: 색상 점은 `ui/theme/LanguageColors.kt`의 `languageBadgeColor(lang: AppLanguage)` 함수에서 반환되는 색상을 사용한다. 해당 함수는 `FlashCardScreen`과 공유된다(중복 정의 없음).
+- [ ] **AC-DD-03**: 기존 탭 상태 인디케이터(PENDING 스피너, ERROR 아이콘)는 제거하거나 이동하지 않는다. 색상 점이 추가될 뿐 기존 인디케이터는 그대로 유지된다.
+- [ ] **AC-DD-04**: 색상 점은 원문 탭을 포함한 모든 언어 탭에 표시된다.
+- [ ] **AC-DD-05**: `languageBadgeColor` 함수에 하드코딩된 언어 코드 문자열이 없다. 반드시 `AppLanguage` enum 경유.
+
 ### 일기 편집 (status: planned)
 
 **AC-E01.** `DiaryDetailScreen` 상단 액션 바에 편집 아이콘 버튼이 노출된다.

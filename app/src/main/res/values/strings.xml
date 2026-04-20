@@ -1,6 +1,57 @@
 <resources>
     <string name="app_name">Lingual</string>
 
+    <!-- 공용 — 여러 화면에서 공유 (AC-i18n-07) -->
+    <string name="common_no_title">제목 없음</string>
+    <string name="common_all">전체</string>
+    <string name="common_save">저장</string>
+    <string name="common_cancel">취소</string>
+    <string name="common_back">뒤로</string>
+
+    <!-- DiaryListScreen (AC-i18n-01) -->
+    <string name="diary_list_title">내 일기</string>
+    <string name="diary_list_fab_cd">새 일기 작성</string>
+    <string name="diary_list_empty">아직 작성된 일기가 없습니다.\n우측 하단의 버튼으로 첫 일기를 써보세요.</string>
+    <string name="diary_list_translating">번역 중 %1$d/%2$d</string>
+    <string name="diary_list_translation_failed">번역 실패</string>
+
+    <!-- WriteDiaryScreen (AC-i18n-02) -->
+    <string name="write_diary_title_new">새 일기</string>
+    <string name="write_diary_title_edit">일기 편집</string>
+    <string name="write_diary_label_source_language">작성 언어</string>
+    <string name="write_diary_label_title">제목</string>
+    <string name="write_diary_placeholder_content">오늘 있었던 일을 적어보세요</string>
+    <string name="write_diary_btn_save_new">저장하고 번역하기</string>
+    <string name="write_diary_btn_saving">저장 중…</string>
+    <string name="write_diary_dialog_exit_title">저장하지 않고 나가시겠습니까?</string>
+    <string name="write_diary_dialog_exit_body">변경한 내용이 저장되지 않습니다.</string>
+    <string name="write_diary_dialog_exit_confirm">나가기</string>
+
+    <!-- TranslateBrowseScreen (AC-i18n-03) -->
+    <string name="translate_browse_title">번역 탐색</string>
+    <string name="translate_browse_empty">조건에 맞는 일기가 없습니다.</string>
+    <string name="translate_browse_source_lang">원문: %1$s</string>
+
+    <!-- FlashCardScreen (AC-i18n-04) -->
+    <string name="flashcard_title">단어장</string>
+    <string name="flashcard_filter_favorites">즐겨찾기</string>
+    <string name="flashcard_filter_due_for_review">복습 예정</string>
+    <string name="flashcard_empty_all">아직 단어 카드가 없습니다.\n일기에서 단어를 추가해 보세요.</string>
+    <string name="flashcard_empty_favorites">즐겨찾기한 카드가 없습니다.</string>
+    <string name="flashcard_empty_due_for_review">복습 예정인 카드가 없습니다.</string>
+    <string name="flashcard_stats_banner">카드 %1$d개 · 즐겨찾기 %2$d개 · 오늘 복습 %3$d개</string>
+    <string name="flashcard_mastery_0">모름</string>
+    <string name="flashcard_mastery_1">어려움</string>
+    <string name="flashcard_mastery_2">보통</string>
+    <string name="flashcard_mastery_3">완벽</string>
+    <string name="flashcard_tap_to_reveal">탭하여 뜻 보기</string>
+    <string name="flashcard_review_count">복습 %1$d회</string>
+    <string name="flashcard_favorite_cd">즐겨찾기</string>
+    <string name="flashcard_delete_cd">삭제</string>
+    <string name="flashcard_delete_dialog_title">이 단어 카드를 삭제할까요?</string>
+    <string name="flashcard_delete_dialog_body">단어 \"%1$s\" 카드를 삭제합니다.</string>
+    <string name="flashcard_delete_confirm">삭제</string>
+
     <!-- FlashCard: 번역 수정 기능 (AC-17~AC-23) -->
     <string name="flashcard_edit_translation_cd">번역 수정</string>
     <string name="flashcard_edit_translation_title">%1$s 번역 수정</string>
@@ -23,4 +74,15 @@
     <string name="flashcard_filter_recently_added">최근 추가</string>
     <!-- FlashCard: 최근 추가 필터 Empty State (AC-14) — 다음 행동 제시 포함 -->
     <string name="flashcard_empty_recently_added">최근 7일 내에 추가된 카드가 없습니다.\n일기를 작성하고 단어 카드를 추가해 보세요.</string>
+
+    <!-- SettingsScreen (AC-i18n-05) -->
+    <string name="settings_title">설정</string>
+    <string name="settings_section_translation_engine">번역 엔진</string>
+    <string name="settings_translation_engine_desc">현재 엔진: Google ML Kit (온디바이스, 오프라인)</string>
+    <string name="settings_translation_model_desc">번역 모델은 최초 사용 시 자동으로 다운로드됩니다 (언어당 약 30MB).</string>
+    <string name="settings_section_tts">TTS</string>
+    <string name="settings_tts_desc">Android 시스템의 TextToSpeech를 사용합니다. 지원 언어는 기기 설정에 따릅니다.</string>
+    <string name="settings_section_app_info">앱 정보</string>
+    <string name="settings_app_version">Lingual · v0.1 MVP</string>
+    <string name="settings_app_desc">한국어, English, 日本語, 中文 간 일기 번역 및 학습 앱</string>
 </resources>

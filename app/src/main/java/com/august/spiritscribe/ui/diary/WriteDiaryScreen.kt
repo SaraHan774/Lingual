@@ -37,9 +37,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.august.spiritscribe.R
 import com.august.spiritscribe.domain.model.AppLanguage
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -79,10 +81,15 @@ fun WriteDiaryScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (state.isEditMode) "일기 편집" else "새 일기") },
+                title = {
+                    Text(
+                        if (state.isEditMode) stringResource(R.string.write_diary_title_edit)
+                        else stringResource(R.string.write_diary_title_new)
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = requestExit) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 },
             )
@@ -105,7 +112,7 @@ fun WriteDiaryScreen(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                Text(text = "작성 언어", style = MaterialTheme.typography.labelLarge)
+                Text(text = stringResource(R.string.write_diary_label_source_language), style = MaterialTheme.typography.labelLarge)
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
@@ -122,7 +129,7 @@ fun WriteDiaryScreen(
                 OutlinedTextField(
                     value = state.title,
                     onValueChange = viewModel::updateTitle,
-                    label = { Text("제목") },
+                    label = { Text(stringResource(R.string.write_diary_label_title)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     enabled = !state.isSaving,
@@ -131,7 +138,7 @@ fun WriteDiaryScreen(
                 OutlinedTextField(
                     value = state.content,
                     onValueChange = viewModel::updateContent,
-                    label = { Text("오늘 있었던 일을 적어보세요") },
+                    label = { Text(stringResource(R.string.write_diary_placeholder_content)) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 8.dp),
@@ -156,12 +163,13 @@ fun WriteDiaryScreen(
                             color = MaterialTheme.colorScheme.onPrimary,
                         )
                         Text(
-                            text = if (state.isEditMode) "저장 중..." else "저장 중...",
+                            text = stringResource(R.string.write_diary_btn_saving),
                             modifier = Modifier.padding(start = 8.dp),
                         )
                     } else {
                         Text(
-                            text = if (state.isEditMode) "저장" else "저장하고 번역하기",
+                            text = if (state.isEditMode) stringResource(R.string.common_save)
+                            else stringResource(R.string.write_diary_btn_save_new),
                         )
                     }
                 }
@@ -172,16 +180,16 @@ fun WriteDiaryScreen(
     if (showExitDialog) {
         AlertDialog(
             onDismissRequest = { showExitDialog = false },
-            title = { Text("저장하지 않고 나가시겠습니까?") },
-            text = { Text("변경한 내용이 저장되지 않습니다.") },
+            title = { Text(stringResource(R.string.write_diary_dialog_exit_title)) },
+            text = { Text(stringResource(R.string.write_diary_dialog_exit_body)) },
             confirmButton = {
                 TextButton(onClick = {
                     showExitDialog = false
                     onNavigateBack()
-                }) { Text("나가기") }
+                }) { Text(stringResource(R.string.write_diary_dialog_exit_confirm)) }
             },
             dismissButton = {
-                TextButton(onClick = { showExitDialog = false }) { Text("취소") }
+                TextButton(onClick = { showExitDialog = false }) { Text(stringResource(R.string.common_cancel)) }
             },
         )
     }

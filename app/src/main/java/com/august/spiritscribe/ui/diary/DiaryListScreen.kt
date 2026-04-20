@@ -28,10 +28,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.august.spiritscribe.R
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -46,10 +48,10 @@ fun DiaryListScreen(
     val entries by viewModel.entries.collectAsStateWithLifecycle()
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("내 일기") }) },
+        topBar = { TopAppBar(title = { Text(stringResource(R.string.diary_list_title)) }) },
         floatingActionButton = {
             FloatingActionButton(onClick = onWriteClick) {
-                Icon(Icons.Filled.Edit, contentDescription = "새 일기 작성")
+                Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.diary_list_fab_cd))
             }
         },
     ) { padding ->
@@ -80,7 +82,7 @@ private fun EmptyState(padding: PaddingValues) {
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = "아직 작성된 일기가 없습니다.\n우측 하단의 버튼으로 첫 일기를 써보세요.",
+            text = stringResource(R.string.diary_list_empty),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -110,7 +112,7 @@ private fun DiaryItem(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = entry.title.ifBlank { "제목 없음" },
+                    text = entry.title.ifBlank { stringResource(R.string.common_no_title) },
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f),
@@ -162,7 +164,7 @@ private fun TranslationStatusBadge(summary: TranslationSummary) {
                 modifier = Modifier.size(14.dp),
             )
             Text(
-                text = "번역 중 ${summary.completed}/${summary.total}",
+                text = stringResource(R.string.diary_list_translating, summary.completed, summary.total),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.secondary,
             )
@@ -178,7 +180,7 @@ private fun TranslationStatusBadge(summary: TranslationSummary) {
                 modifier = Modifier.size(14.dp),
             )
             Text(
-                text = "번역 실패",
+                text = stringResource(R.string.diary_list_translation_failed),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.error,
             )

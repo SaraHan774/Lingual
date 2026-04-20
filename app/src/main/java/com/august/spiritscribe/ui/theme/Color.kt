@@ -2,7 +2,7 @@ package com.august.spiritscribe.ui.theme
 import androidx.compose.ui.graphics.Color
 
 // Light Theme Colors
-val md_theme_light_primary = Color(0xFF8B4513) // Warm brown for whiskey
+val md_theme_light_primary = Color(0xFF8B4513)
 val md_theme_light_onPrimary = Color(0xFFFFFFFF)
 val md_theme_light_primaryContainer = Color(0xFFFFDCC1)
 val md_theme_light_onPrimaryContainer = Color(0xFF2E1500)
@@ -62,13 +62,6 @@ val md_theme_dark_inversePrimary = Color(0xFF8B4513)
 val md_theme_dark_surfaceTint = Color(0xFFFFB68C)
 val md_theme_dark_outlineVariant = Color(0xFF52443D)
 val md_theme_dark_scrim = Color(0xFF000000)
-
-// Custom Colors for Whiskey App
-val whiskey_amber = Color(0xFFFFB347)
-val whiskey_gold = Color(0xFFFFD700)
-val whiskey_copper = Color(0xFFB87333)
-val whiskey_caramel = Color(0xFFD4A76A)
-val whiskey_oak = Color(0xFF806517)
 
 val primaryLight = Color(0xFF785A0B)
 val onPrimaryLight = Color(0xFFFFFFFF)

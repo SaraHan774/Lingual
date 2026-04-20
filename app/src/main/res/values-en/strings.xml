@@ -1,6 +1,57 @@
 <resources>
     <string name="app_name">Lingual</string>
 
+    <!-- Common — shared across screens (AC-i18n-07) -->
+    <string name="common_no_title">Untitled</string>
+    <string name="common_all">All</string>
+    <string name="common_save">Save</string>
+    <string name="common_cancel">Cancel</string>
+    <string name="common_back">Back</string>
+
+    <!-- DiaryListScreen (AC-i18n-01) -->
+    <string name="diary_list_title">My Diary</string>
+    <string name="diary_list_fab_cd">New diary entry</string>
+    <string name="diary_list_empty">No diary entries yet.\nTap the button at the bottom right to write your first entry.</string>
+    <string name="diary_list_translating">Translating %1$d/%2$d</string>
+    <string name="diary_list_translation_failed">Translation failed</string>
+
+    <!-- WriteDiaryScreen (AC-i18n-02) -->
+    <string name="write_diary_title_new">New Diary</string>
+    <string name="write_diary_title_edit">Edit Diary</string>
+    <string name="write_diary_label_source_language">Writing language</string>
+    <string name="write_diary_label_title">Title</string>
+    <string name="write_diary_placeholder_content">Write about your day</string>
+    <string name="write_diary_btn_save_new">Save &amp; Translate</string>
+    <string name="write_diary_btn_saving">Saving…</string>
+    <string name="write_diary_dialog_exit_title">Leave without saving?</string>
+    <string name="write_diary_dialog_exit_body">Your changes will not be saved.</string>
+    <string name="write_diary_dialog_exit_confirm">Leave</string>
+
+    <!-- TranslateBrowseScreen (AC-i18n-03) -->
+    <string name="translate_browse_title">Browse Translations</string>
+    <string name="translate_browse_empty">No entries match the selected filter.</string>
+    <string name="translate_browse_source_lang">Source: %1$s</string>
+
+    <!-- FlashCardScreen (AC-i18n-04) -->
+    <string name="flashcard_title">Flashcards</string>
+    <string name="flashcard_filter_favorites">Favorites</string>
+    <string name="flashcard_filter_due_for_review">Due for Review</string>
+    <string name="flashcard_empty_all">No word cards yet.\nAdd words from your diary entries.</string>
+    <string name="flashcard_empty_favorites">No favorite cards yet.</string>
+    <string name="flashcard_empty_due_for_review">No cards due for review.</string>
+    <string name="flashcard_stats_banner">%1$d cards · %2$d favorites · %3$d due today</string>
+    <string name="flashcard_mastery_0">Unknown</string>
+    <string name="flashcard_mastery_1">Hard</string>
+    <string name="flashcard_mastery_2">Good</string>
+    <string name="flashcard_mastery_3">Perfect</string>
+    <string name="flashcard_tap_to_reveal">Tap to reveal meaning</string>
+    <string name="flashcard_review_count">%1$d reviews</string>
+    <string name="flashcard_favorite_cd">Favorite</string>
+    <string name="flashcard_delete_cd">Delete</string>
+    <string name="flashcard_delete_dialog_title">Delete this word card?</string>
+    <string name="flashcard_delete_dialog_body">The card for \"%1$s\" will be deleted.</string>
+    <string name="flashcard_delete_confirm">Delete</string>
+
     <!-- FlashCard: Edit translation (AC-17~AC-23) -->
     <string name="flashcard_edit_translation_cd">Edit translation</string>
     <string name="flashcard_edit_translation_title">Edit %1$s translation</string>
@@ -23,4 +74,15 @@
     <string name="flashcard_filter_recently_added">Recent</string>
     <!-- FlashCard: Recently Added filter Empty State (AC-14) — includes next action -->
     <string name="flashcard_empty_recently_added">No cards added in the last 7 days.\nWrite a diary entry and add some word cards.</string>
+
+    <!-- SettingsScreen (AC-i18n-05) -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_section_translation_engine">Translation Engine</string>
+    <string name="settings_translation_engine_desc">Current engine: Google ML Kit (on-device, offline)</string>
+    <string name="settings_translation_model_desc">Translation models are downloaded automatically on first use (~30 MB per language).</string>
+    <string name="settings_section_tts">TTS</string>
+    <string name="settings_tts_desc">Uses the Android system TextToSpeech. Supported languages depend on device settings.</string>
+    <string name="settings_section_app_info">About</string>
+    <string name="settings_app_version">Lingual · v0.1 MVP</string>
+    <string name="settings_app_desc">Diary translation and learning app supporting Korean, English, 日本語, and 中文.</string>
 </resources>

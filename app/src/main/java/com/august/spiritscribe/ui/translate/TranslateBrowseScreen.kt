@@ -1,6 +1,7 @@
 package com.august.spiritscribe.ui.translate
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -20,30 +22,28 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.august.spiritscribe.R
 import com.august.spiritscribe.domain.model.AppLanguage
 import com.august.spiritscribe.domain.model.DiaryEntry
-import com.august.spiritscribe.ui.diary.DiaryListViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TranslateBrowseScreen(
     onEntryClick: (String) -> Unit,
-    viewModel: DiaryListViewModel = hiltViewModel(),
+    viewModel: TranslateBrowseViewModel = hiltViewModel(),
 ) {
-    val entries by viewModel.entries.collectAsStateWithLifecycle()
-    var filter by remember { mutableStateOf<AppLanguage?>(null) }
+    val selectedLanguage by viewModel.selectedLanguage.collectAsStateWithLifecycle()
+    val filteredEntries by viewModel.filteredEntries.collectAsStateWithLifecycle()
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("번역 탐색") }) },
+        topBar = { TopAppBar(title = { Text(stringResource(R.string.translate_browse_title)) }) },
     ) { padding ->
         Column(
             modifier = Modifier
@@ -53,32 +53,31 @@ fun TranslateBrowseScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
                     .padding(horizontal = 16.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 FilterChip(
-                    selected = filter == null,
-                    onClick = { filter = null },
-                    label = { Text("전체") },
+                    selected = selectedLanguage == null,
+                    onClick = { viewModel.selectLanguage(null) },
+                    label = { Text(stringResource(R.string.common_all)) },
                 )
                 AppLanguage.entries.forEach { lang ->
                     FilterChip(
-                        selected = filter == lang,
-                        onClick = { filter = lang },
+                        selected = selectedLanguage == lang,
+                        onClick = { viewModel.selectLanguage(lang) },
                         label = { Text(lang.displayName) },
                     )
                 }
             }
 
-            val filtered = entries.filter { filter == null || it.entry.sourceLanguage == filter }
-
-            if (filtered.isEmpty()) {
+            if (filteredEntries.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = "조건에 맞는 일기가 없습니다.",
+                        text = stringResource(R.string.translate_browse_empty),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -88,7 +87,7 @@ fun TranslateBrowseScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    items(filtered, key = { it.entry.id }) { item ->
+                    items(filteredEntries, key = { it.entry.id }) { item ->
                         TranslateEntryRow(entry = item.entry, onClick = { onEntryClick(item.entry.id) })
                     }
                 }
@@ -114,7 +113,7 @@ private fun TranslateEntryRow(
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Text(
-                text = entry.title.ifBlank { "제목 없음" },
+                text = entry.title.ifBlank { stringResource(R.string.common_no_title) },
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -125,7 +124,7 @@ private fun TranslateEntryRow(
                 maxLines = 2,
             )
             Text(
-                text = "원문: ${entry.sourceLanguage.displayName}",
+                text = stringResource(R.string.translate_browse_source_lang, entry.sourceLanguage.displayName),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.outline,
             )

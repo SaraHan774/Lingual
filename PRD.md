@@ -4,7 +4,7 @@
 >
 > **Maintained by:** [`.claude/agents/prd-curator.md`](./.claude/agents/prd-curator.md)
 > **Supported locales:** 한국어 · English · 日本語 · 中文
-> **Last indexed:** 2026-04-19 (FlashCard 필터 칩에 "최근 추가 (7일 내)" 옵션 추가 — FlashCardFilter 에 RecentlyAdded 케이스, AC-9 갱신, AC-24/AC-25 신규)
+> **Last indexed:** 2026-04-19 (i18n PRD 추가 — 09-feature-i18n.md, strings.xml 전환 AC 정의, G-01 대응)
 
 ---
 
@@ -37,6 +37,8 @@ Lingual은 **polyglot(다국어 학습자)을 위한 일기 앱**이다. 사용�
   `TextToSpeech` 기반 4개 언어 음성 재생, 재생 상태 StateFlow 공개.
 - [06 — Settings (설정)](./docs/prd/06-feature-settings.md) · **status: shipped (read-only)**
   번역 엔진·TTS·앱 정보 안내. 사용자 편집 가능 설정은 Phase 2.
+- [09 — UI 국제화 (i18n)](./docs/prd/09-feature-i18n.md) · **status: in-progress**
+  모든 화면의 하드코딩 한국어 UI 문자열을 strings.xml 로 추출, EN 번역 추가. 시스템 로케일 자동 전환. UX Review G-01 대응.
 
 ### 3. 시스템 & 로드맵
 

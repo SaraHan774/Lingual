@@ -31,10 +31,20 @@
 
 - FilterChip: `전체` + `한국어` / `English` / `日本語` / `中文`
 - 항목 탭 → `DiaryDetail(id)`
+- **언어 필터 상태는 `TranslateBrowseViewModel`이 소유**한다. Compose 로컬 state(`remember`)에 두지 않는다. 이로써 탭 전환 후 복귀해도 필터 선택이 유지된다.
+
+### TranslateBrowseViewModel
+
+`TranslateBrowseScreen` 전용 `@HiltViewModel`. `DiaryListViewModel`을 공유하지 않는다.
+
+- **entries**: `DiaryRepository.observeAllWithTranslations()` Flow를 구독해 `List<DiaryListItem>`을 `StateFlow`로 노출. (`DiaryListItem`, `TranslationSummary`는 `DiaryListViewModel`과 동일 타입을 재사용.)
+- **selectedLanguage**: `StateFlow<AppLanguage?>` — `null`이면 `전체`, `AppLanguage` 값이면 해당 언어 필터. 초기값 `null`.
+- **selectLanguage(lang: AppLanguage?)**: 필터 갱신 이벤트. Screen에서 FilterChip onClick 시 호출.
+- **filteredEntries**: `combine(entries, selectedLanguage)`로 파생된 `StateFlow<List<DiaryListItem>>`. 실제 UI는 이 Flow만 구독한다.
 
 ## TranslationSummary 집계 로직
 
-`DiaryListViewModel`이 `(DiaryEntry, List<Translation>)` 스트림을 소비해 각 항목의 `TranslationSummary`를 파생한다.
+`DiaryListViewModel`과 `TranslateBrowseViewModel`이 각각 `(DiaryEntry, List<Translation>)` 스트림을 소비해 각 항목의 `TranslationSummary`를 파생한다.
 
 우선순위 (높음 → 낮음):
 1. 번역 레코드 없음 → `Empty`
@@ -72,12 +82,29 @@
 
 ## Acceptance Criteria
 
+### 번역 엔진 (기존)
 - [x] 일기 저장 직후 `(diaryEntryId, targetLanguage)` 3쌍의 PENDING 레코드가 <500ms 내에 생성된다.
 - [x] 동일 언어쌍을 두 번째로 번역할 때는 모델 다운로드 없이 수행된다 (인스턴스 캐시 히트).
 - [x] 네트워크가 끊긴 상태에서 이미 다운로드된 언어쌍은 정상 번역된다.
 - [x] 네트워크가 끊긴 상태에서 **첫 번째** 호출이면 ERROR 상태로 기록되고 사용자에게 재시도 옵션이 제공된다.
 - [x] `modelVersion` 필드가 모든 SUCCESS 레코드에 기록된다.
 - [ ] 번역 ERROR 비율이 주간 2% 미만. (메트릭 수집 수단은 미정 — Open Questions)
+
+### TranslateBrowseViewModel 분리 (신규 — T-01)
+- [ ] `TranslateBrowseScreen`은 `DiaryListViewModel`을 주입받지 않는다. 전용 `TranslateBrowseViewModel`만 사용한다.
+- [ ] `TranslateBrowseViewModel`은 `@HiltViewModel`로 선언되어 Hilt가 주입한다.
+- [ ] 언어 필터(`selectedLanguage: StateFlow<AppLanguage?>`)의 초기값은 `null`(전체)이다.
+- [ ] FilterChip 선택 시 `selectLanguage()` 호출 → `selectedLanguage` 갱신 → `filteredEntries` 자동 재계산.
+- [ ] 하단 탭을 다른 탭으로 이동했다가 Translate 탭으로 복귀해도 선택된 언어 필터가 유지된다 (ViewModel 생명주기가 Activity에 묶여 있으므로).
+- [ ] `filteredEntries`는 `combine(entries, selectedLanguage)`로 파생되며, `entries`나 `selectedLanguage` 중 하나가 바뀌면 즉시 재계산된다.
+- [ ] 필터 선택 상태가 `null`일 때 모든 일기 항목이 표시된다.
+- [ ] 필터 선택 상태가 특정 `AppLanguage`일 때 `entry.sourceLanguage == selectedLanguage`인 항목만 표시된다.
+- [ ] 조건에 맞는 항목이 없을 때 빈 상태(Empty State) 메시지가 표시된다 ("조건에 맞는 일기가 없습니다.").
+
+### 에러·엣지케이스
+- [ ] DB에 일기가 하나도 없을 때 빈 상태 메시지가 필터 상태와 무관하게 표시된다.
+- [ ] `TranslateBrowseViewModel` 내부에서 예외가 발생해도 화면이 크래시하지 않는다. (Flow 스트림 에러는 `catch` 처리 후 빈 리스트로 폴백.)
+- [ ] 파괴적 동작 없음 — 이 화면은 읽기 전용이므로 삭제/수정 AC 불필요.
 
 ## Error Handling
 

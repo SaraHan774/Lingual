@@ -3,6 +3,7 @@ package com.august.spiritscribe.ui.diary
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -56,6 +58,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.font.FontWeight
@@ -67,6 +70,7 @@ import com.august.spiritscribe.domain.model.AppLanguage
 import com.august.spiritscribe.domain.model.DiaryEntry
 import com.august.spiritscribe.domain.model.Translation
 import com.august.spiritscribe.domain.model.TranslationStatus
+import com.august.spiritscribe.ui.theme.languageBadgeColor
 import com.august.spiritscribe.utils.TtsState
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -230,6 +234,7 @@ private fun DetailContent(
                         onClick = { selectedIndex = index },
                         text = {
                             TabLabel(
+                                lang = lang,
                                 label = if (isSource) "${lang.displayName} (원문)" else lang.displayName,
                                 isSource = isSource,
                                 status = translationStatus,
@@ -482,6 +487,7 @@ private fun AddWordCardBottomSheet(
 
 @Composable
 private fun TabLabel(
+    lang: AppLanguage,
     label: String,
     isSource: Boolean,
     status: TranslationStatus?,
@@ -490,6 +496,13 @@ private fun TabLabel(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
+        // AC-DD-01: 모든 탭(원문 포함)에 AppLanguage별 8dp 색상 점 표시
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .clip(CircleShape)
+                .background(languageBadgeColor(lang)),
+        )
         Text(text = label)
         // 원문/번역 탭 모두 상태와 무관하게 10dp 영역을 항상 예약한다. 번역 탭의 PENDING →
         // SUCCESS 전이뿐 아니라 원문/번역 탭 사이의 너비 비대칭도 함께 방지한다. 원문 탭은
