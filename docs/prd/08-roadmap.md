@@ -35,6 +35,12 @@
 8. **일기 편집 기능 + 편집 시 번역 무효화 정책** ← [Resolved 2026-04-19] `02-feature-diary.md` AC-E01~E10 참조
 9. **TTS 속도·피치 사용자 설정** (→ `06-feature-settings.md`)
 10. **검색/필터 (일기 본문 검색)**
+11. **Translate Playground 히스토리 영속화** (→ `03-feature-translation.md` Open Questions)
+    현재 Playground 는 비영속(ViewModel scope). 사용자가 "어제 찾아봤던 단어" 를 다시 찾을 수 있도록 최근 10~20건 로컬 캐시 제공.
+12. **Translate Playground 기반 문장 번역 퀴즈/학습 세션** (→ `03-feature-translation.md` Non-Goals)
+    Playground 의 정답 비교 기반 학습 모드. v0.1 에서 의도적으로 보류한 항목.
+13. **Diary 탭 원문 언어 필터 (T-02 회수분)** (→ `02-feature-diary.md`, `03-feature-translation.md`)
+    T-02 에서 `TranslateBrowseScreen` 을 제거하면서 "원문 언어 FilterChip" 기능이 임시 손실. 03 의 "Diary 탭에 흡수돼도 기능 손실 없음" 주장을 충족하기 위해 `DiaryListScreen` 상단에 4개 언어 FilterChip 행을 추가, `selectedSourceLanguage: AppLanguage?` 상태로 목록을 필터링한다 (null = 전체).
 
 ### P2 — 확장성·파워 유저
 
@@ -91,3 +97,4 @@
 | 2026-04-18 | 단어 카드 번역: ML Kit 단어 단위 직접 호출 (일기 번역 재사용 안 함) | 단어 카드는 독립 생애주기 필요, 문장 번역에서 단어 추출 불가 |
 | 2026-04-18 | 중복 단어: 별도 카드로 추가 (병합 없음) | v0.1은 단순성 우선, Phase 2에서 재검토 |
 | 2026-04-19 | 일기 편집 번역 무효화 정책: A+C 채택 (전 언어 PENDING 리셋 → 즉시 재번역). 제목만 변경 시 무효화 없음. | diff 기반 부분 번역은 ML Kit 오프라인 특성상 이점 없고 복잡도만 증가 |
+| 2026-04-21 | Translate 탭 전면 재설계 (T-02): 기존 `TranslateBrowseScreen` (DiaryList 와 중복된 일기 목록+필터) 제거 → **Translate Playground** (실시간 프리뷰 번역기 + 단어 카드 저장 + TTS) 로 교체 | "번역" 탭 이름과 실제 가치 사이의 간극 제거, 페르소나 '민지' 의 "사전 찾다 흐름 끊김" pain point 해결, FlashCard 와 자연스러운 연결 |

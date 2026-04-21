@@ -27,10 +27,28 @@
     <string name="write_diary_dialog_exit_body">변경한 내용이 저장되지 않습니다.</string>
     <string name="write_diary_dialog_exit_confirm">나가기</string>
 
-    <!-- TranslateBrowseScreen (AC-i18n-03) -->
+    <!-- TranslateBrowseScreen (AC-i18n-03) — DEPRECATED 2026-04-21 (T-02): 화면 제거됨, AC-T02-R02 에 따라 키는 한 사이클 유지. -->
     <string name="translate_browse_title">번역 탐색</string>
     <string name="translate_browse_empty">조건에 맞는 일기가 없습니다.</string>
     <string name="translate_browse_source_lang">원문: %1$s</string>
+
+    <!-- TranslatePlaygroundScreen (AC-T02-I02) -->
+    <string name="translate_playground_title">번역 연습</string>
+    <string name="translate_playground_input_hint">번역할 단어·구·문장을 입력하세요</string>
+    <string name="translate_playground_char_counter">%1$d / %2$d</string>
+    <string name="translate_playground_source_language_label">원문 언어</string>
+    <string name="translate_playground_clear_cd">지우기</string>
+    <string name="translate_playground_placeholder">결과가 여기에 표시됩니다</string>
+    <string name="translate_playground_loading">번역 중…</string>
+    <string name="translate_playground_retry">다시 시도</string>
+    <string name="translate_playground_error_generic">번역에 실패했습니다</string>
+    <string name="translate_playground_save_button_label">단어 카드로 저장 (%1$d개 언어 포함)</string>
+    <string name="translate_playground_save_success">단어 카드가 저장되었습니다.</string>
+    <string name="translate_playground_save_success_action">FlashCard 보기</string>
+    <string name="translate_playground_save_failure">단어 카드 저장에 실패했습니다. 다시 시도해 주세요.</string>
+    <string name="translate_playground_tts_cd">발음 듣기</string>
+    <string name="translate_playground_tts_unavailable">해당 언어 TTS 데이터가 설치되어 있지 않습니다.</string>
+    <string name="translate_playground_first_use_hint">처음 사용하는 언어쌍은 약 30 MB 모델 다운로드가 필요해요 (Wi-Fi 권장).</string>
 
     <!-- FlashCardScreen (AC-i18n-04) -->
     <string name="flashcard_title">단어장</string>

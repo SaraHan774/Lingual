@@ -25,7 +25,7 @@ import com.august.spiritscribe.ui.diary.DiaryListScreen
 import com.august.spiritscribe.ui.diary.WriteDiaryScreen
 import com.august.spiritscribe.ui.flashcard.FlashCardScreen
 import com.august.spiritscribe.ui.settings.SettingsScreen
-import com.august.spiritscribe.ui.translate.TranslateBrowseScreen
+import com.august.spiritscribe.ui.translate.TranslatePlaygroundScreen
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -85,8 +85,11 @@ fun AppNavigation(
             )
         }
         composable(Screen.Translate.route) {
-            TranslateBrowseScreen(
-                onEntryClick = { id -> navController.navigate(DiaryDetail(id)) },
+            TranslatePlaygroundScreen(
+                onNavigateToFlashCard = {
+                    // AC-T02-21 — FlashCard 탭으로 이동하되 Playground 화면은 백스택에 유지.
+                    navController.navigate(Screen.FlashCard.route) { launchSingleTop = true }
+                },
             )
         }
         composable(Screen.FlashCard.route) { FlashCardScreen() }

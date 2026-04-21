@@ -27,10 +27,28 @@
     <string name="write_diary_dialog_exit_body">Your changes will not be saved.</string>
     <string name="write_diary_dialog_exit_confirm">Leave</string>
 
-    <!-- TranslateBrowseScreen (AC-i18n-03) -->
+    <!-- TranslateBrowseScreen (AC-i18n-03) — DEPRECATED 2026-04-21 (T-02): screen removed, keys retained for one cycle per AC-T02-R02. -->
     <string name="translate_browse_title">Browse Translations</string>
     <string name="translate_browse_empty">No entries match the selected filter.</string>
     <string name="translate_browse_source_lang">Source: %1$s</string>
+
+    <!-- TranslatePlaygroundScreen (AC-T02-I02) -->
+    <string name="translate_playground_title">Translate</string>
+    <string name="translate_playground_input_hint">Enter a word, phrase, or sentence</string>
+    <string name="translate_playground_char_counter">%1$d / %2$d</string>
+    <string name="translate_playground_source_language_label">Source language</string>
+    <string name="translate_playground_clear_cd">Clear</string>
+    <string name="translate_playground_placeholder">Results will appear here</string>
+    <string name="translate_playground_loading">Translating…</string>
+    <string name="translate_playground_retry">Retry</string>
+    <string name="translate_playground_error_generic">Translation failed</string>
+    <string name="translate_playground_save_button_label">Save as word card (%1$d languages)</string>
+    <string name="translate_playground_save_success">Word card saved.</string>
+    <string name="translate_playground_save_success_action">View</string>
+    <string name="translate_playground_save_failure">Failed to save word card. Please try again.</string>
+    <string name="translate_playground_tts_cd">Play pronunciation</string>
+    <string name="translate_playground_tts_unavailable">TTS data for this language is not installed.</string>
+    <string name="translate_playground_first_use_hint">First-time language pairs need a ~30 MB model download (Wi-Fi recommended).</string>
 
     <!-- FlashCardScreen (AC-i18n-04) -->
     <string name="flashcard_title">Flashcards</string>
