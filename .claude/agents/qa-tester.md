@@ -92,7 +92,11 @@ cycle 내 qa 재호출(iter ≥ 2) 시엔 이 단계를 **건너뛴다** — 이
 
 ### 3) 조작 및 관찰
 
-- UI 트리 확인은 `android layout --pretty` 를 1차 수단으로 사용한다. 변화만 보고 싶으면 `android layout --diff`.
+- **좌표는 `.claude/cache/ui-coords.json` 을 먼저 조회한다.** 정적 요소(하단탭·FAB·언어칩·저장버튼 등)의 좌표가 캐시에 있으면 `android layout` / screencap 을 다시 뜨지 않고 바로 `adb shell input tap <x> <y>` 를 쓴다. 이게 qa 전체 런타임을 가장 크게 줄이는 단일 최적화다.
+  - **캐시 프리플라이트** (cycle 당 1회): `jq -r .device.resolution .claude/cache/ui-coords.json` 과 `adb shell wm size` 비교. 다르면 캐시 무효 → 필요한 screen 을 새로 덤프 후 덮어쓴다.
+  - **캐시 미스/드리프트** (탭했는데 변화 없거나 엉뚱한 화면 진입): 해당 screen 만 `android layout --device <serial> -o /tmp/layout_<screen>.json -p` 로 재수집 → `.claude/cache/ui-coords.json` 의 해당 `screens.<id>.elements` 를 **Edit 로 갱신**하고 보고서에 `cache updated: <screen>.<element>` 한 줄 남긴다. 같은 iter 동일 screen 에서 두 번 미스면 전체 screen 을 재수집.
+  - **캐시에 넣지 않는 것**: 리스트 아이템처럼 순서에 따라 y 가 바뀌는 동적 요소. 이런 건 `android layout` + `jq '.[] | select(.text==...) | .center'` 로 매번 찾는다.
+- UI 트리 확인은 `android layout --pretty` 를 **캐시 미스·동적 요소·검증 assert** 에서만 사용한다. 변화만 보고 싶으면 `android layout --diff`.
 - WebView·Lottie·Compose 애니메이션이 `layout`에 잡히지 않으면 PNG 로 저장해 **직접 시각적으로 확인**한다. 캡처는 레시피의 `adb exec-out screencap -p > <file>` 직접 파이프를 사용(`android screen capture` wrapper 대비 빠름). **캡처 시점은 FAIL 판정 순간 + 최종 assert 만** — 중간 단계 관찰은 `android layout --diff` 로 대체해 PNG 생성 비용을 줄인다.
 - 터치/스와이프/입력은 `adb shell input tap`, `input swipe`, `input text`, `input keyevent` 로 수행한다. 입력 필드는 `state`에 `focused`가 포함되어 있는지 먼저 확인한다.
 - 텍스트 입력 시 한/중/일 문자열은 `adb shell input text` 로 들어가지 않는 경우가 있으므로, 필요한 경우 `adb shell am broadcast ADB_INPUT_TEXT`나 클립보드 붙여넣기(`adb shell service call clipboard ...`) 등 대안을 고려하고, 어떤 방법을 썼는지 보고서에 남긴다.
@@ -155,6 +159,17 @@ adb logcat -T 1 -s QA:D
 
 # UI 트리 (변화만)
 android layout --diff --pretty
+
+# UI 좌표 캐시 — 먼저 여기를 보고 없을 때만 layout 재수집
+CACHE=.claude/cache/ui-coords.json
+# 해상도 검증
+[ "$(jq -r .device.resolution $CACHE)" = "$(adb shell wm size | awk '{print $NF}' | tr -d '\r')" ] \
+  || echo "WARN: 해상도 불일치 — 캐시 무효"
+# 좌표 조회 → 바로 탭
+read x y < <(jq -r '.screens.home.elements.fab_write | @tsv' $CACHE)
+adb shell input tap "$x" "$y"
+# 캐시 갱신 (미스/드리프트 시): 해당 screen 만 덤프 → 좌표 추출 → Edit 로 $CACHE 업데이트
+android layout --device "$ANDROID_SERIAL" -o /tmp/layout_<screen>.json -p
 
 # 스크린샷 (FAIL 판정 + 최종 assert 에만)
 mkdir -p ./test-artifacts/qa-$(date +%Y%m%d-%H%M%S)
@@ -253,6 +268,7 @@ adb shell am force-stop com.august.spiritscribe  # 재시작으로 반영
 - PRD와 앱 동작이 어긋날 때 단독으로 "스펙 변경" 판정을 내리지 말 것. 반드시 `prd-curator`에게 확인.
 - 테스트 실패를 감추기 위해 시나리오를 축소하거나 AC를 임의로 완화하지 말 것. 실패는 실패로 정직하게 보고한다.
 - 한 번 실패한 시나리오를 설명 없이 반복 재실행하며 "flaky" 라고 처리하지 말 것. 재현 빈도를 명시한다 (예: `2/5 attempts`).
+- 캐시(`ui-coords.json`)에 좌표가 있는데도 매번 `android layout` / screencap 을 다시 뜨지 말 것 — qa 비용의 가장 큰 낭비 지점. 캐시 무효 조건(해상도/밀도 변경, 탭 실패)이 **확인된** 경우에만 재수집하고, 재수집했으면 **반드시** 캐시를 갱신한다.
 
 ## VERDICT 블록 (`/ship` 사이클에서 호출되었을 때만)
 

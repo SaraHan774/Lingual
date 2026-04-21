@@ -6,12 +6,14 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.august.spiritscribe.WriteDiary
 import com.august.spiritscribe.data.translation.TranslationEngine
+import com.august.spiritscribe.di.ApplicationScope
 import com.august.spiritscribe.domain.model.AppLanguage
 import com.august.spiritscribe.domain.model.DiaryEntry
 import com.august.spiritscribe.domain.model.Translation
 import com.august.spiritscribe.domain.model.TranslationStatus
 import com.august.spiritscribe.domain.repository.DiaryRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -47,6 +49,7 @@ class WriteDiaryViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: DiaryRepository,
     private val translationEngine: TranslationEngine,
+    @ApplicationScope private val applicationScope: CoroutineScope,
 ) : ViewModel() {
 
     // 편집 모드면 non-null, 신규 작성 모드면 null.
@@ -143,10 +146,12 @@ class WriteDiaryViewModel @Inject constructor(
             runCatching {
                 repository.createEntry(entry)
                 resetTranslationsToPending(entry)
+            }.onSuccess {
                 // PENDING 업서트 완료 직후 saved=true → 화면이 popBackStack.
-                // 번역 본작업은 백그라운드에서 이어진다(AC-E07 의 즉시 반영 + 상세 화면에서 PENDING→텍스트 전이).
+                // 번역 본작업은 applicationScope 에서 이어진다. viewModelScope 로 띄우면 popBackStack
+                // 시 VM 이 clear 되며 코루틴이 취소돼 후속 언어가 PENDING 에 멈춘다.
                 _uiState.update { it.copy(isSaving = false, saved = true) }
-                translateAll(entry)
+                applicationScope.launch { translateAll(entry) }
             }.onFailure { e ->
                 _uiState.update { it.copy(isSaving = false, error = e.message ?: "저장 실패") }
             }
@@ -184,11 +189,13 @@ class WriteDiaryViewModel @Inject constructor(
                     // AC-E05: 본문 또는 원문 언어 변경 → 전 언어 PENDING 리셋 → 즉시 재번역.
                     resetTranslationsToPending(updated)
                 }
+            }.onSuccess {
                 // popBackStack 은 PENDING upsert 완료 직후(번역 본작업 전)에 실행되어야 한다.
                 // 이렇게 해야 상세 화면에서 스피너 → 텍스트 전이가 관찰된다.
                 _uiState.update { it.copy(isSaving = false, saved = true) }
                 if (needsRetranslate) {
-                    translateAll(updated)
+                    // 번역 본작업은 VM 수명에 묶이지 않도록 applicationScope 에서 실행한다.
+                    applicationScope.launch { translateAll(updated) }
                 }
                 // 제목만 변경(AC-E06) 또는 변경 없음(AC-E05 예외): 번역 레코드 불변, updatedAt 만 갱신.
             }.onFailure { e ->

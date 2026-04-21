@@ -41,6 +41,8 @@
 - **TTS**: `@Singleton TtsService` 가 `StateFlow<TtsState>` (`Idle`/`Playing`/`Error`) 노출. `AppLanguage.toLocale()` 로 Locale 지정. 기기에 TTS 데이터 미설치 Locale 은 `Error("Language not supported: ...")`.
 - **Room**: `exportSchema = false`. 마이그레이션 미설정 → version bump 는 destructive rebuild 를 전제로 한다.
 - **Compose one-shot 이벤트**: `MutableSharedFlow<Unit>(replay=0, extraBufferCapacity=1)` + `LaunchedEffect(Unit) { collect { ... } }` 패턴 사용. `StateFlow<Int>` + increment 방식은 Composition 재생성(화면 회전 등) 시 마지막 값으로 LaunchedEffect 가 재실행되어 replay 버그 발생.
+- **VM 수명을 초과하는 백그라운드 작업은 `@ApplicationScope CoroutineScope` 주입.** 저장 직후 `popBackStack()` 으로 VM 이 clear 되면 `viewModelScope` 가 취소되어 후속 작업(예: 3개 언어 번역)이 PENDING 에 멈춘다. `di/CoroutineScopeModule.kt` 의 `SupervisorJob + Dispatchers.Default` 스코프 사용. Write → translate-all 이 대표 사례.
+- **UI 문자열은 반드시 `stringResource` 경유.** 하드코딩 한국어 리터럴 금지. 새 문자열 추가 시 `values/strings.xml` + `values-en/strings.xml` 동시 추가.
 - **QA 마커**: qa-tester 가 스크린샷 대신 logcat 으로 상태 전이를 확인할 수 있도록, 핵심 상태 전이에 `Log.d("QA", "<event>:<context>")` 를 **debug 빌드 전용** 으로 삽입 가능(`BuildConfig.DEBUG` 가드). 태그는 `"QA"` 고정. 상세 규칙은 `.claude/agents/coder.md` 의 "QA 마커" 섹션.
 
 ## Commands

@@ -235,3 +235,9 @@ node_modules/
 
 # Google Play Console
 play_console_credentials.json
+
+# Claude Code 로컬 캐시 (UI 좌표 등 기기 의존 데이터)
+.claude/cache/
+
+# E2E 시나리오 산출물 (screen record, 로그)
+test-artifacts/
